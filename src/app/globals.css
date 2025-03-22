@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 4%;
+    --foreground: 0 0% 93%;
+
+    --card: 0 0% 9%;
+    --card-foreground: 0 0% 93%;
+
+    --popover: 0 0% 9%;
+    --popover-foreground: 0 0% 93%;
+
+    --primary: 47 87% 66%;
+    --primary-foreground: 0 0% 0%;
+
+    --secondary: 0 0% 9%;
+    --secondary-foreground: 0 0% 93%;
+
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 64%;
+
+    --accent: 47 87% 66%;
+    --accent-foreground: 0 0% 0%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 47 87% 66%;
+
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    font-family: var(--font-geist-sans);
+  }
+  
+  .font-montserrat {
+    font-family: var(--font-montserrat);
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary text-primary-foreground font-medium py-2 px-4 rounded-md hover:opacity-90 transition-colors;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground border border-border font-medium py-2 px-4 rounded-md hover:bg-muted transition-colors;
+  }
+
+  .card {
+    @apply bg-card border border-border rounded-lg p-4 shadow-lg;
+  }
+
+  .input {
+    @apply bg-secondary border border-border text-foreground rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary;
+  }
+
+  .table-header {
+    @apply bg-secondary text-foreground font-medium py-2 px-4 text-left;
+  }
+
+  .table-cell {
+    @apply border-t border-border py-3 px-4;
+  }
+
+  .sidebar-link {
+    @apply flex items-center gap-2 px-4 py-3 text-foreground hover:bg-muted rounded-md transition-colors;
+  }
+
+  .sidebar-link.active {
+    @apply bg-muted text-primary;
+  }
+
+  .stats-card {
+    @apply flex flex-col p-6 bg-card border border-border rounded-lg;
+  }
+
+  .stats-value {
+    @apply text-3xl font-bold text-primary;
+  }
+
+  .stats-label {
+    @apply text-sm text-muted-foreground;
+  }
+}
+
