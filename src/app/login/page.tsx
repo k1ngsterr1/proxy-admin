@@ -7,35 +7,37 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
+import { useLogin } from "@/lib/auth"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const router = useRouter()
 
+  const loginMutation = useLogin()
+  const loading = loginMutation.isPending
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
     setError("")
 
-    // This is a placeholder for actual authentication logic
-    // In a real app, you would call an API endpoint here
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // For demo purposes, hardcoded credentials
-      if (email === "admin@proxy.luxe" && password === "admin") {
-        router.push("/admin")
-      } else {
-        setError("Неверный email или пароль")
-      }
+      // Вызываем мутацию для входа
+      await loginMutation.mutateAsync({ email, password }, {
+        onSuccess: () => {
+          // При успешной аутентификации перенаправляем на админ-панель
+          router.push('/admin')
+        },
+        onError: (error) => {
+          // При ошибке показываем сообщение
+          setError(error.message || 'Неверный email или пароль')
+        }
+      })
     } catch (err) {
+      // Этот блок выполнится только если произойдет ошибка вне мутации
       setError("Произошла ошибка при входе")
-    } finally {
-      setLoading(false)
+      console.error('Ошибка аутентификации:', err)
     }
   }
 
@@ -52,7 +54,7 @@ export default function LoginPage() {
               className="font-montserrat"
             />
           </div>
-          
+
           <Card>
             <CardHeader>
               <CardTitle className="text-center">Вход в админ-панель</CardTitle>

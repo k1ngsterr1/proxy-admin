@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Bold,
@@ -9,11 +9,6 @@ import {
   ListOrdered,
   Heading1,
   Heading2,
-  Image as ImageIcon,
-  Link as LinkIcon,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
   Undo,
   Redo,
   FileImage,
