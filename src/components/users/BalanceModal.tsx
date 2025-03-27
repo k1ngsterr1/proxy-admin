@@ -18,13 +18,14 @@ import {
 
 interface BalanceModalProps {
   userId: string
-  currentBalance: number
+  currentBalance: number | string
   isOpen: boolean
   onClose: () => void
   onSave: (userId: string, amount: number, isAddition: boolean) => void
+  isSaving?: boolean
 }
 
-export default function BalanceModal({ userId, currentBalance, isOpen, onClose, onSave }: BalanceModalProps) {
+export default function BalanceModal({ userId, currentBalance, isOpen, onClose, onSave, isSaving = false }: BalanceModalProps) {
   const [amount, setAmount] = useState(0)
   const [isAddition, setIsAddition] = useState(true)
 
@@ -40,7 +41,7 @@ export default function BalanceModal({ userId, currentBalance, isOpen, onClose, 
         <DialogHeader>
           <DialogTitle>Изменить баланс</DialogTitle>
           <DialogDescription>
-            Текущий баланс: <span className="font-bold text-primary">${currentBalance.toFixed(2)}</span>
+            Текущий баланс: <span className="font-bold text-primary">${typeof currentBalance === 'number' ? currentBalance.toFixed(2) : Number(currentBalance).toFixed(2)}</span>
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
@@ -82,10 +83,12 @@ export default function BalanceModal({ userId, currentBalance, isOpen, onClose, 
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={onClose} disabled={isSaving}>
               Отмена
             </Button>
-            <Button type="submit">Подтвердить</Button>
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? "Обработка..." : "Подтвердить"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

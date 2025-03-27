@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
+import { UserType } from "../../types"
 import type { User } from "../../types"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -23,15 +24,19 @@ interface UserModalProps {
   isOpen: boolean
   onClose: () => void
   onSave: (user: User) => void
+  isSaving?: boolean
 }
 
-export default function UserModal({ user, isOpen, onClose, onSave }: UserModalProps) {
+export default function UserModal({ user, isOpen, onClose, onSave, isSaving = false }: UserModalProps) {
   const [formData, setFormData] = useState<Partial<User>>({
     name: "",
     email: "",
     balance: 0,
     proxyUsage: "",
-    isBlocked: false,
+    isBanned: false,
+    type: UserType.USER,
+    isVerified: false,
+    ip: "0.0.0.0"
   })
 
   useEffect(() => {
@@ -41,7 +46,10 @@ export default function UserModal({ user, isOpen, onClose, onSave }: UserModalPr
         email: user.email,
         balance: user.balance,
         proxyUsage: user.proxyUsage,
-        isBlocked: user.isBlocked,
+        isBanned: user.isBanned,
+        type: user.type,
+        isVerified: user.isVerified,
+        ip: user.ip
       })
     }
   }, [user])
@@ -58,7 +66,7 @@ export default function UserModal({ user, isOpen, onClose, onSave }: UserModalPr
   const handleCheckboxChange = (checked: boolean) => {
     setFormData({
       ...formData,
-      isBlocked: checked,
+      isBanned: checked,
     })
   }
 
@@ -141,15 +149,17 @@ export default function UserModal({ user, isOpen, onClose, onSave }: UserModalPr
                 Заблокирован
               </Label>
               <div className="col-span-3 flex items-center space-x-2">
-                <Checkbox id="isBlocked" checked={formData.isBlocked} onCheckedChange={handleCheckboxChange} />
+                <Checkbox id="isBlocked" checked={formData.isBanned} onCheckedChange={handleCheckboxChange} />
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={onClose} disabled={isSaving}>
               Отмена
             </Button>
-            <Button type="submit">Сохранить</Button>
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? "Сохранение..." : "Сохранить"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

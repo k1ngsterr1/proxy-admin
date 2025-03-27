@@ -79,53 +79,6 @@ export default function Sidebar() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Link
-                      href="/admin/proxies"
-                      className={`sidebar-link ${isActive("/admin/proxies") ? "active" : ""}`}
-                    >
-                      <Server size={20} />
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">
-                    <p>Прокси</p>
-                  </TooltipContent>
-                </Tooltip>
-              ) : (
-                <Link href="/admin/proxies" className={`sidebar-link ${isActive("/admin/proxies") ? "active" : ""}`}>
-                  <Server size={20} />
-                  <span>Прокси</span>
-                </Link>
-              )}
-            </li>
-            <li>
-              {collapsed ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link
-                      href="/admin/transactions"
-                      className={`sidebar-link ${isActive("/admin/transactions") ? "active" : ""}`}
-                    >
-                      <DollarSign size={20} />
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">
-                    <p>Транзакции</p>
-                  </TooltipContent>
-                </Tooltip>
-              ) : (
-                <Link
-                  href="/admin/transactions"
-                  className={`sidebar-link ${isActive("/admin/transactions") ? "active" : ""}`}
-                >
-                  <DollarSign size={20} />
-                  <span>Транзакции</span>
-                </Link>
-              )}
-            </li>
-            <li>
-              {collapsed ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link
                       href="/admin/promo-codes"
                       className={`sidebar-link ${isActive("/admin/promo-codes") ? "active" : ""}`}
                     >
@@ -150,47 +103,6 @@ export default function Sidebar() {
               {collapsed ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Link href="/admin/logs" className={`sidebar-link ${isActive("/admin/logs") ? "active" : ""}`}>
-                      <Activity size={20} />
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">
-                    <p>Логи</p>
-                  </TooltipContent>
-                </Tooltip>
-              ) : (
-                <Link href="/admin/logs" className={`sidebar-link ${isActive("/admin/logs") ? "active" : ""}`}>
-                  <Activity size={20} />
-                  <span>Логи</span>
-                </Link>
-              )}
-            </li>
-            <li>
-              {collapsed ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link
-                      href="/admin/reports"
-                      className={`sidebar-link ${isActive("/admin/reports") ? "active" : ""}`}
-                    >
-                      <FileText size={20} />
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">
-                    <p>Отчеты</p>
-                  </TooltipContent>
-                </Tooltip>
-              ) : (
-                <Link href="/admin/reports" className={`sidebar-link ${isActive("/admin/reports") ? "active" : ""}`}>
-                  <FileText size={20} />
-                  <span>Отчеты</span>
-                </Link>
-              )}
-            </li>
-            <li>
-              {collapsed ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
                     <Link
                       href="/admin/articles"
                       className={`sidebar-link ${isActive("/admin/articles") ? "active" : ""}`}
@@ -206,28 +118,6 @@ export default function Sidebar() {
                 <Link href="/admin/articles" className={`sidebar-link ${isActive("/admin/articles") ? "active" : ""}`}>
                   <BookOpen size={20} />
                   <span>Статьи</span>
-                </Link>
-              )}
-            </li>
-            <li>
-              {collapsed ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link
-                      href="/admin/settings"
-                      className={`sidebar-link ${isActive("/admin/settings") ? "active" : ""}`}
-                    >
-                      <Settings size={20} />
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">
-                    <p>Настройки</p>
-                  </TooltipContent>
-                </Tooltip>
-              ) : (
-                <Link href="/admin/settings" className={`sidebar-link ${isActive("/admin/settings") ? "active" : ""}`}>
-                  <Settings size={20} />
-                  <span>Настройки</span>
                 </Link>
               )}
             </li>

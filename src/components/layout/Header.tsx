@@ -2,12 +2,15 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useCurrentUser } from "@/lib/user"
 import { Skeleton } from "../ui/skeleton"
+import { Button } from "../ui/button"
+import { logout } from "@/lib/auth"
+import { useRouter } from "next/navigation"
+import { LogOut } from "lucide-react"
 
 export default function Header() {
-  // Используем хук для получения данных пользователя
   const { data: user, isLoading, isError } = useCurrentUser();
+  const router = useRouter();
 
-  // Получаем первую букву имени для аватара
   const getInitial = () => {
     if (user?.name) {
       return user.name.charAt(0).toUpperCase();
@@ -24,25 +27,39 @@ export default function Header() {
         <h1 className="text-xl font-bold">Админ-панель</h1>
       </div>
       <div className="flex items-center gap-6">
-        <div className="flex items-center gap-2">
-          <Avatar className="w-8 h-8 ">
-            <AvatarFallback className="text-primary-foreground">{getInitial()}</AvatarFallback>
-          </Avatar>
-          <div className="text-left hidden md:block">
-            {isLoading ? (
-              <div className="space-y-1">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-3 w-32" />
-              </div>
-            ) : isError ? (
-              <p className="text-sm text-muted-foreground">Ошибка загрузки</p>
-            ) : (
-              <>
-                <p className="text-sm font-medium">{user?.name || 'Администратор'}</p>
-                <p className="text-xs text-muted-foreground">{user?.email}</p>
-              </>
-            )}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Avatar className="w-8 h-8 ">
+              <AvatarFallback className="text-primary-foreground">{getInitial()}</AvatarFallback>
+            </Avatar>
+            <div className="text-left hidden md:block">
+              {isLoading ? (
+                <div className="space-y-1">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-3 w-32" />
+                </div>
+              ) : isError ? (
+                <p className="text-sm text-muted-foreground">Ошибка загрузки</p>
+              ) : (
+                <>
+                  <p className="text-sm font-medium">{user?.name || 'Администратор'}</p>
+                  <p className="text-xs text-muted-foreground">{user?.email}</p>
+                </>
+              )}
+            </div>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-1"
+            onClick={() => {
+              logout();
+              router.push('/login');
+            }}
+          >
+            <LogOut size={16} />
+            <span className="hidden sm:inline">Выйти</span>
+          </Button>
         </div>
       </div>
     </header>

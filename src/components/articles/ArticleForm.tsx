@@ -7,60 +7,54 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import ArticleEditor from "./Editor"
-import { Checkbox } from "@/components/ui/checkbox"
+import { articlesApi, Article, CreateArticleDto, UpdateArticleDto } from "@/lib/api/articles"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 
 interface ArticleFormProps {
-  article?: {
-    id?: number
-    title: string
-    slug: string
-    content: string
-    isPublished: boolean
-  }
+  article?: Article
   isEditing?: boolean
 }
 
 export default function ArticleForm({ article, isEditing = false }: ArticleFormProps) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [title, setTitle] = useState(article?.title || "")
-  const [slug, setSlug] = useState(article?.slug || "")
   const [content, setContent] = useState(article?.content || "")
-  const [isPublished, setIsPublished] = useState(article?.isPublished || false)
-  const [isSaving, setIsSaving] = useState(false)
+  const [image, setImage] = useState(article?.image || "")
 
-  // Auto-generate slug from title
-  useEffect(() => {
-    if (!isEditing && title && !slug) {
-      const generatedSlug = title
-        .toLowerCase()
-        .replace(/[^\w\s]/gi, '')
-        .replace(/\s+/g, '-')
-      setSlug(generatedSlug)
+  const createMutation = useMutation({
+    mutationFn: articlesApi.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['articles'] })
+      router.push("/admin/articles")
     }
-  }, [title, isEditing, slug])
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateArticleDto }) =>
+      articlesApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['articles'] })
+      router.push("/admin/articles")
+    }
+  })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsSaving(true)
 
-    // Mock API call - replace with actual API in production
-    try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      console.log({
-        title,
-        slug,
-        content,
-        isPublished
+    const articleData = {
+      title,
+      content,
+      image: image || undefined
+    }
+
+    if (isEditing && article?.id) {
+      updateMutation.mutate({
+        id: article.id,
+        data: articleData
       })
-      
-      // Redirect back to articles list
-      router.push("/admin/articles")
-    } catch (error) {
-      console.error("Error saving article:", error)
-    } finally {
-      setIsSaving(false)
+    } else {
+      createMutation.mutate(articleData as CreateArticleDto)
     }
   }
 
@@ -81,42 +75,26 @@ export default function ArticleForm({ article, isEditing = false }: ArticleFormP
               required
             />
           </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="slug">URL-адрес</Label>
-            <Input
-              id="slug"
-              value={slug}
-              onChange={(e) => setSlug(e.target.value)}
-              placeholder="url-адрес-статьи"
-              required
-            />
-          </div>
-          
           <div className="space-y-2">
             <Label htmlFor="content">Содержание</Label>
             <ArticleEditor content={content} onChange={setContent} />
           </div>
-          
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="published" 
-              checked={isPublished} 
-              onCheckedChange={(checked) => setIsPublished(checked as boolean)} 
-            />
-            <Label htmlFor="published">Опубликовать</Label>
-          </div>
         </CardContent>
         <CardFooter className="flex justify-between">
-          <Button 
-            type="button" 
-            variant="outline" 
+          <Button
+            type="button"
+            variant="outline"
             onClick={() => router.push("/admin/articles")}
           >
             Отмена
           </Button>
-          <Button type="submit" disabled={isSaving}>
-            {isSaving ? "Сохранение..." : isEditing ? "Обновить" : "Создать"}
+          <Button
+            type="submit"
+            disabled={createMutation.isPending || updateMutation.isPending}
+          >
+            {createMutation.isPending || updateMutation.isPending
+              ? "Сохранение..."
+              : isEditing ? "Обновить" : "Создать"}
           </Button>
         </CardFooter>
       </Card>
