@@ -23,19 +23,15 @@ export default function LoginPage() {
     setError("")
 
     try {
-      // Вызываем мутацию для входа
       await loginMutation.mutateAsync({ email, password }, {
         onSuccess: () => {
-          // При успешной аутентификации перенаправляем на админ-панель
           router.push('/admin')
         },
         onError: (error) => {
-          // При ошибке показываем сообщение
           setError(error.message || 'Неверный email или пароль')
         }
       })
     } catch (err) {
-      // Этот блок выполнится только если произойдет ошибка вне мутации
       setError("Произошла ошибка при входе")
       console.error('Ошибка аутентификации:', err)
     }
@@ -45,15 +41,15 @@ export default function LoginPage() {
     <div className="flex h-screen bg-background">
       <div className="flex flex-col items-center justify-center w-full">
         <div className="w-full max-w-md px-4">
-          <div className="flex justify-center mb-8">
+          {/* <div className="flex justify-center mb-8">
             <Image
-              src="/logo.jpg"
-              alt="PROXY.LUXE"
-              width={200}
-              height={60}
-              className="font-montserrat"
+              src="/logo.png"
+              alt="Логотип"
+              width={80}
+              height={80}
+              className="mx-auto mb-4 rounded"
             />
-          </div>
+          </div> */}
 
           <Card>
             <CardHeader>
