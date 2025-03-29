@@ -9,7 +9,7 @@ export interface PromoCode {
 }
 
 export interface CreatePromoCodeDto {
-  code: string;
+  promocode: string;
   discount: number;
   limit: number;
 }
@@ -25,7 +25,7 @@ export const promocodesApi = {
     return data;
   },
 
-  delete: async (id: string): Promise<void> => {
-    await apiClient.delete(`/user/promocode/${id}`);
+  delete: async (code: string): Promise<void> => {
+    await apiClient.delete(`/user/promocode/delete/${code}`);
   }
 };

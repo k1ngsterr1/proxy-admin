@@ -17,7 +17,7 @@ export default function PromoCodeList() {
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [newPromoCode, setNewPromoCode] = useState<CreatePromoCodeDto>({
-    code: "",
+    promocode: "",
     discount: 10,
     limit: 50
   })
@@ -32,7 +32,7 @@ export default function PromoCodeList() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['promocodes'] })
       setIsDialogOpen(false)
-      setNewPromoCode({ code: "", discount: 10, limit: 50 })
+      setNewPromoCode({ promocode: "", discount: 10, limit: 50 })
       toast.success("Промокод успешно создан")
     },
     onError: (error) => {
@@ -55,7 +55,7 @@ export default function PromoCodeList() {
   })
 
   const handleCreatePromoCode = () => {
-    if (!newPromoCode.code) {
+    if (!newPromoCode.promocode) {
       toast.error("Введите код промокода")
       return
     }
@@ -99,11 +99,11 @@ export default function PromoCodeList() {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="code">Код промокода</Label>
+                <Label htmlFor="promocode">Код промокода</Label>
                 <Input
-                  id="code"
-                  value={newPromoCode.code}
-                  onChange={(e) => setNewPromoCode({ ...newPromoCode, code: e.target.value.toUpperCase() })}
+                  id="promocode"
+                  value={newPromoCode.promocode}
+                  onChange={(e) => setNewPromoCode({ ...newPromoCode, promocode: e.target.value.toUpperCase() })}
                   placeholder="SUMMER_SALE"
                 />
               </div>
@@ -153,7 +153,6 @@ export default function PromoCodeList() {
                 <TableHead>Код</TableHead>
                 <TableHead>Скидка</TableHead>
                 <TableHead>Лимит</TableHead>
-                <TableHead>Использовано</TableHead>
                 <TableHead className="text-right">Действия</TableHead>
               </TableRow>
             </TableHeader>
@@ -170,14 +169,14 @@ export default function PromoCodeList() {
                     <TableCell className="font-mono">{promoCode.code}</TableCell>
                     <TableCell>{promoCode.discount}%</TableCell>
                     <TableCell>{promoCode.limit}</TableCell>
-                    <TableCell>{promoCode.usageCount || 0}</TableCell>
                     <TableCell className="text-right">
-                      <Dialog>
+                      <Dialog onOpenChange={(open) => {
+                        if (open) setDeleteId(promoCode.id);
+                      }}>
                         <DialogTrigger asChild>
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setDeleteId(promoCode.id)}
                           >
                             <Trash2 size={16} />
                           </Button>
@@ -186,7 +185,7 @@ export default function PromoCodeList() {
                           <DialogHeader>
                             <DialogTitle>Удалить промокод</DialogTitle>
                             <DialogDescription>
-                              Вы уверены, что хотите удалить промокод "{promoCodes.find(p => p.id === deleteId)?.code}"?
+                              Вы уверены, что хотите удалить промокод "{promoCode.code}"?
                             </DialogDescription>
                           </DialogHeader>
                           <DialogFooter className="mt-4">
@@ -195,7 +194,7 @@ export default function PromoCodeList() {
                             </DialogClose>
                             <Button
                               variant="destructive"
-                              onClick={() => deleteId && handleDeletePromoCode(deleteId)}
+                              onClick={() => promoCode.code && handleDeletePromoCode(promoCode.code)}
                               disabled={deleteMutation.isPending}
                             >
                               {deleteMutation.isPending ? "Удаление..." : "Удалить"}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Bold,
@@ -27,6 +27,9 @@ import Link from '@tiptap/extension-link'
 import Placeholder from '@tiptap/extension-placeholder'
 import TextStyle from '@tiptap/extension-text-style'
 import Color from '@tiptap/extension-color'
+
+// Add custom CSS for the editor
+import "./editor.css"
 
 interface ArticleEditorProps {
   content: string
@@ -67,6 +70,19 @@ export default function ArticleEditor({ content, onChange }: ArticleEditorProps)
       onChange(editor.getHTML())
     },
   })
+  
+  // При изменении содержимого обновляем редактор
+  useEffect(() => {
+    if (editor && content) {
+      console.log('Editor content updated, setting content:', content.substring(0, 100) + '...')
+      // Принудительно обновляем содержимое редактора
+      editor.commands.setContent(content)
+      
+      // Проверяем, есть ли в контенте изображения
+      const hasImages = content.includes('<img')
+      console.log('Content has images:', hasImages)
+    }
+  }, [editor, content])
 
   // Обработчик выбора изображения
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -83,10 +99,23 @@ export default function ArticleEditor({ content, onChange }: ArticleEditorProps)
     }
   }
 
+  // Никакой отдельной загрузки изображений - они будут отправлены вместе со статьей
+
   // Добавление изображения в редактор
   const insertImage = () => {
-    if (imagePreview && editor) {
-      editor.chain().focus().setImage({ src: imagePreview }).run()
+    if (imagePreview && imageFile && editor) {
+      // Просто вставляем изображение в редактор
+      editor.chain().focus().setImage({ 
+        src: imagePreview, // Используем предпросмотр для отображения
+        alt: imageFile.name || 'Uploaded image',
+        title: imageFile.name || 'Uploaded image',
+      }).run()
+      
+      // Обновляем содержимое
+      const html = editor.getHTML()
+      onChange(html)
+      
+      // Закрываем диалог
       setImageDialogOpen(false)
       setImageFile(null)
       setImagePreview(null)
@@ -220,6 +249,7 @@ export default function ArticleEditor({ content, onChange }: ArticleEditorProps)
               <Button
                 onClick={insertImage}
                 disabled={!imagePreview}
+                className="image-upload-button"
               >
                 Добавить
               </Button>
@@ -247,7 +277,7 @@ export default function ArticleEditor({ content, onChange }: ArticleEditorProps)
 
       {/* Редактор Tiptap */}
       <div className="tiptap-editor-wrapper">
-        <EditorContent editor={editor} className="p-4 min-h-[400px] prose max-w-none" />
+        <EditorContent editor={editor} className="p-4 min-h-[400px] prose max-w-none editor-content" />
       </div>
 
       {/* Стили для редактора, чтобы соответствовать стилю админ-панели */}

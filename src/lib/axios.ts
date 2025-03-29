@@ -6,7 +6,7 @@ const isBrowser = () => typeof window !== 'undefined';
 // Function to get token from cookies or localStorage
 const getToken = () => {
   if (!isBrowser()) return null;
-  
+
   // Try to get from cookies first (for SSR compatibility)
   if (typeof document !== 'undefined') {
     const cookies = document.cookie.split(';');
@@ -15,16 +15,19 @@ const getToken = () => {
       return decodeURIComponent(tokenCookie.split('=')[1]);
     }
   }
-  
+
   // Fallback to localStorage
   return localStorage.getItem('accessToken');
 };
 
 const apiClient = axios.create({
-  baseURL: 'https://aproxyluxe-production.up.railway.app/api/v1/',
+  baseURL: 'https://api.proxy.luxe/api/v1/',
   headers: {
     'Content-Type': 'application/json',
   },
+  // Increase maximum content size
+  maxContentLength: Infinity,
+  maxBodyLength: Infinity,
 });
 
 apiClient.interceptors.request.use(
@@ -33,6 +36,12 @@ apiClient.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // For FormData, let the browser set the Content-Type with boundary
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+    }
+    
     return config;
   },
   (error) => {
