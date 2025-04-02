@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { DollarSign, Ban, CheckCircle } from "lucide-react"
+import { DollarSign, Ban, ArrowBigRight, ArrowRight } from "lucide-react"
 import type { User as UserType } from "../../types"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -13,6 +13,7 @@ interface UserTableProps {
   users: UserType[]
   onBlock: (userId: string, block: boolean) => void
   onBalanceAdjust: (userId: string) => void
+  onOrdersClick: (userId: string) => void
   isBlocking?: boolean
 }
 
@@ -20,6 +21,7 @@ export default function UserTable({
   users,
   onBlock,
   onBalanceAdjust,
+  onOrdersClick,
   isBlocking = false
 }: UserTableProps) {
   const [searchTerm, setSearchTerm] = useState("")
@@ -91,6 +93,15 @@ export default function UserTable({
                           disabled={isBlocking}
                         >
                           <Ban size={16} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Заказы"
+                          onClick={() => onOrdersClick(user.id)}
+                          disabled={isBlocking}
+                        >
+                          <ArrowRight size={16} />
                         </Button>
                       </div>
                     )}

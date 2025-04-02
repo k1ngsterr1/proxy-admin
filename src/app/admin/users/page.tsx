@@ -78,7 +78,10 @@ export default function UsersPage() {
   }
 
 
-
+  const handleOrdersClick = (userId: string) => {
+    console.log("Go to orders for user:", userId)
+    window.location.href = `/admin/orders?userId=${userId}`
+  }
 
 
   const balanceMutation = useMutation({
@@ -125,6 +128,7 @@ export default function UsersPage() {
       ) : (
         <UserTable
           users={users}
+          onOrdersClick={handleOrdersClick}
           onBlock={handleBlockUser}
           onBalanceAdjust={handleBalanceAdjust}
           isBlocking={blockMutation.isPending}
