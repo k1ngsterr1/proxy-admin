@@ -15,16 +15,3 @@ export const useOrdersData = (type: string, userId: string) => {
         staleTime: 5 * 60 * 1000,
     });
 };
-
-export const proxySellerId = (userId: string) => {
-    return useQuery({
-        queryKey: ["proxySeller", userId],
-        queryFn: async ({ queryKey }) => {
-            const [_key, userId] = queryKey;
-            const { data } = await apiClient.get(`/orders/admin/${userId}`);
-            return data;
-        },
-        retry: 1,
-        staleTime: 5 * 60 * 1000,
-    })
-}

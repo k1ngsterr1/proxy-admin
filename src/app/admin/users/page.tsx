@@ -18,6 +18,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
+import { useUserStore } from "@/components/model/user-store"
+
 export default function UsersPage() {
   const queryClient = useQueryClient()
   const [isBalanceModalOpen, setIsBalanceModalOpen] = useState(false)
@@ -26,6 +28,8 @@ export default function UsersPage() {
   const [isUnbanDialogOpen, setIsUnbanDialogOpen] = useState(false)
   const [userToBan, setUserToBan] = useState<{ email: string, block: boolean } | null>(null)
   const [userToUnban, setUserToUnban] = useState<{ email: string, block: boolean } | null>(null)
+
+  const { setEmail } = useUserStore()
 
 
   const { data: users = [], isLoading, error } = useQuery({
@@ -115,9 +119,18 @@ export default function UsersPage() {
 
 
   const handleOrdersClick = (userId: string) => {
+    setEmail(users.find(user => user.id === userId)?.email || "")
     console.log("Go to orders for user:", userId)
     window.location.href = `/admin/orders?userId=${userId}`
   }
+
+  const handleLogsClick = (userId: string) => {
+    setEmail(users.find(user => user.id === userId)?.email || "")
+    console.log("Go to orders for user:", userId)
+    window.location.href = `/admin/logs?userId=${userId}`
+  }
+
+
 
 
   const balanceMutation = useMutation({
@@ -167,6 +180,7 @@ export default function UsersPage() {
       ) : (
         <UserTable
           users={users}
+          onLogsClick={handleLogsClick}
           onOrdersClick={handleOrdersClick}
           onBlock={handleBlockUser}
           onUnblock={handleUnblockUser}

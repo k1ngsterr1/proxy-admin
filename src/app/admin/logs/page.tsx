@@ -1,118 +1,152 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import AdminLayout from "../../../components/layout/AdminLayout"
-import LogTable from "../../../components/logs/LogTable"
-import type { LogEvent } from "../../../types"
+import { useState } from "react"
+import { useParams } from "next/navigation"
+import { Loader2 } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import AdminLayout from "@/components/layout/AdminLayout"
 
-// Mock data
-const mockLogs: LogEvent[] = [
-  {
-    id: "1",
-    userId: "user123",
-    eventType: "Вход в систему",
-    description: "Успешный вход в систему",
-    ipAddress: "192.168.1.1",
-    timestamp: new Date().toISOString(),
-  },
-  {
-    id: "2",
-    userId: "user456",
-    eventType: "Покупка прокси",
-    description: "Приобретено 5 прокси HTTPS на 30 дней",
-    ipAddress: "192.168.1.2",
-    timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "3",
-    userId: "user789",
-    eventType: "Пополнение баланса",
-    description: "Пополнение баланса на $100",
-    ipAddress: "192.168.1.3",
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "4",
-    userId: "user123",
-    eventType: "Продление прокси",
-    description: "Продление 3 прокси на 60 дней",
-    ipAddress: "192.168.1.1",
-    timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "5",
-    userId: "admin",
-    eventType: "Блокировка пользователя",
-    description: "Заблокирован пользователь user999",
-    ipAddress: "192.168.1.10",
-    timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "6",
-    userId: "user456",
-    eventType: "Использование промо-кода",
-    description: "Использован промо-код WELCOME10",
-    ipAddress: "192.168.1.2",
-    timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "7",
-    userId: "user789",
-    eventType: "Выход из системы",
-    description: "Выход из системы",
-    ipAddress: "192.168.1.3",
-    timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "8",
-    userId: "user123",
-    eventType: "Изменение пароля",
-    description: "Пароль успешно изменен",
-    ipAddress: "192.168.1.1",
-    timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "9",
-    userId: "admin",
-    eventType: "Создание промо-кода",
-    description: "Создан новый промо-код SUMMER25",
-    ipAddress: "192.168.1.10",
-    timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "10",
-    userId: "user456",
-    eventType: "Тестовый доступ",
-    description: "Выдан тестовый доступ к прокси на 24 часа",
-    ipAddress: "192.168.1.2",
-    timestamp: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-]
+import { useGetLogs } from "@/lib/api/logs"
+import { useUserStore } from "@/components/model/user-store"
 
-export default function LogsPage() {
-  const [logs, setLogs] = useState<LogEvent[]>(mockLogs)
-
-  // In a real application, you would fetch this data from your API
-  useEffect(() => {
-    // Fetch logs from API
-    // Example:
-    // const fetchLogs = async () => {
-    //   const response = await fetch('/api/logs');
-    //   const data = await response.json();
-    //   setLogs(data);
-    // };
-    // fetchLogs();
-  }, [])
-
-  return (
-    <AdminLayout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Логи системы</h1>
-        <p className="text-muted-foreground">Журнал событий и действий пользователей</p>
-      </div>
-
-      <LogTable logs={logs} />
-    </AdminLayout>
-  )
+interface Order {
+    id: string
+    createdAt: string
+    totalPrice: string
+    status: string
+    proxySellerId: string
 }
 
+interface Payment {
+    id: string
+    createdAt: string
+    amount: string
+    method: string
+    status: string
+    description?: string
+}
+
+interface UserLogs {
+    payments: Payment[]
+    orders: Order[]
+}
+
+
+
+
+export default function UserLogsPage() {
+    const params = useParams()
+    const userId = params.userId as string
+
+    const { data: logs, isLoading } = useGetLogs(userId)
+    const { email } = useUserStore()
+
+    const [activeTab, setActiveTab] = useState("orders")
+    return (
+        <AdminLayout>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Логи пользователя {email}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <Tabs defaultValue="orders" value={activeTab} onValueChange={setActiveTab}>
+                        <TabsList className="mb-4">
+                            <TabsTrigger value="orders">Заказы ({logs?.data?.orders?.length})</TabsTrigger>
+                            <TabsTrigger value="payments">Платежи ({logs?.data?.payments?.length})</TabsTrigger>
+                        </TabsList>
+
+                        {isLoading ? <div className="flex justify-center items-center py-16 text-muted-foreground gap-2">
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                            Загрузка данных...
+                        </div> :
+
+                            <TabsContent value="orders">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="w-[180px]">ID заказа</TableHead>
+                                            <TableHead>Дата</TableHead>
+                                            <TableHead>Сумма</TableHead>
+                                            <TableHead>Номер заказа</TableHead>
+                                            <TableHead>Статус</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {logs?.data?.orders?.map((order: any) => (
+                                            <TableRow key={order.id}>
+                                                <TableCell className="font-mono text-xs">{order.id}</TableCell>
+                                                <TableCell>
+                                                    {new Date(order.createdAt).toLocaleDateString()}{" "}
+                                                    {new Date(order.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                                </TableCell>
+                                                <TableCell className="font-medium">${Number.parseFloat(order.totalPrice).toFixed(2)}</TableCell>
+                                                <TableCell className="font-mono text-xs">{order.proxySellerId}</TableCell>
+                                                <TableCell>
+                                                    <Badge
+                                                        className={
+                                                            order.status === "PAID"
+                                                                ? "bg-green-500/10 text-green-500"
+                                                                : "bg-yellow-500/10 text-yellow-500"
+                                                        }
+                                                        variant="outline"
+                                                    >
+                                                        {order.status === "PAID" ? "Оплачен" : order.status}
+                                                    </Badge>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+
+                                {logs?.data?.orders?.length === 0 && (
+                                    <div className="text-center py-8 text-muted-foreground">Заказы не найдены</div>
+                                )}
+                            </TabsContent>}
+
+
+                        <TabsContent value="payments">
+                            {logs?.data?.payments?.length > 0 ? (
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="w-[180px]">ID платежа</TableHead>
+                                            <TableHead>ID Пользователя</TableHead>
+                                            <TableHead>Сумма</TableHead>
+                                            <TableHead>Дата создания</TableHead>
+                                            <TableHead>Дата обновления</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {logs?.data?.payments.map((payment: any) => (
+                                            <TableRow key={payment.id}>
+                                                <TableCell className="font-mono text-xs">{payment.id}</TableCell>
+                                                <TableCell>
+                                                    {payment.userId}
+                                                </TableCell>
+                                                <TableCell className="font-medium">${Number.parseFloat(payment.price).toFixed(2)}</TableCell>
+                                                <TableCell>{payment.method}</TableCell>
+                                                <TableCell>
+                                                    {new Date(payment.createdAt).toLocaleDateString()}{" "}
+                                                    {new Date(payment.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {new Date(payment.updatedAt).toLocaleDateString()}{" "}
+                                                    {new Date(payment.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            ) : (
+                                <div className="text-center py-8 text-muted-foreground">Платежи отсутствуют</div>
+                            )}
+                        </TabsContent>
+                    </Tabs>
+                </CardContent>
+            </Card>
+        </AdminLayout>
+    )
+}

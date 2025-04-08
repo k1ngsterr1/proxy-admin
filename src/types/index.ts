@@ -1,15 +1,11 @@
-export enum UserType {
-  ADMIN = 'ADMIN',
-  USER = 'USER'
-}
+
 
 export interface User {
   id: string
-  type: UserType
   email: string
   name?: string
   password?: string
-  balance: number | string | any // Handle Decimal type from Prisma
+  balance: number | string | any
   isVerified: boolean
   ip: string
   isBanned: boolean
@@ -17,7 +13,7 @@ export interface User {
   change_password_code?: string
   createdAt: string
   updatedAt: string
-  proxyUsage?: string // Additional field for admin panel
+  proxyUsage?: string
 }
 
 export interface Proxy {

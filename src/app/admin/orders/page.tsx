@@ -4,37 +4,27 @@ import { useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Copy } from "lucide-react"
 import AdminLayout from "@/components/layout/AdminLayout"
-import { Badge } from "@/components/ui/badge"
 
 import { useOrdersData } from "@/lib/orders"
 import { useSearchParams } from "next/navigation"
-import { proxySellerId } from "@/lib/orders"
+
 
 type ProxyType = "isp" | "ipv6" | "resident"
 
 export default function Orders() {
     const [activeTab, setActiveTab] = useState<ProxyType>("resident")
-    const [expandedPorts, setExpandedPorts] = useState<number | null>(null)
 
     const searchParams = useSearchParams();
     const userId = searchParams.get("userId");
 
 
     const { data: orders, isLoading, } = useOrdersData(activeTab, userId ?? "")
-    const { data: proxySeller } = proxySellerId(userId ?? "")
 
-    console.log("proxySeller", proxySeller)
+    console.log(orders)
+
 
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text)
-    }
-
-    const formatBytes = (bytes: string) => {
-        const b = Number.parseInt(bytes)
-        const sizes = ["Bytes", "KB", "MB", "GB", "TB"]
-        if (b === 0) return "0 Byte"
-        const i = Math.floor(Math.log(b) / Math.log(1024))
-        return Math.round(b / Math.pow(1024, i)) + " " + sizes[i]
     }
 
     return (
@@ -68,27 +58,19 @@ export default function Orders() {
                                     IPv6
                                 </TabsTrigger>
                             </TabsList>
-                            <div className="flex flex-row gap-x-2">
-                                <span className="text-white text-md">Proxy seller id:</span>
-                                <span className="text-white text-md">
-                                    {proxySeller?.map((item: any) => item?.proxySellerId).join(", ")}
-                                </span>
-                            </div>
                         </div>
                         <TabsContent value="resident">
                             <div className="max-w-full overflow-x-auto">
                                 <table className="w-full">
                                     <thead>
                                         <tr className="border-b border-[#333] text-[#b3b3b3] text-sm text-left">
-                                            <th className="py-3 pr-4 font-normal">Логин</th>
+                                            <th className="py-3 pr-4 font-normal">Название</th>
+                                            <th className="py-3 px-4 font-normal">IP-адрес</th>
+                                            <th className="py-3 px-4 font-normal">Протокол</th>
+                                            <th className="py-3 px-4 font-normal">Порт HTTP</th>
+                                            <th className="py-3 px-4 font-normal">Логин</th>
                                             <th className="py-3 px-4 font-normal">Пароль</th>
-                                            <th className="py-3 px-4 font-normal">Порты</th>
-                                            <th className="py-3 px-4 font-normal">Лимит трафика</th>
-                                            <th className="py-3 px-4 font-normal">Срок истечения</th>
-                                            <th className="py-3 px-4 font-normal">Статус</th>
-                                            <th className="py-3 px-4 font-normal">Номер заказа</th>
-                                            <th className="py-3 px-4 font-normal">Остаток трафика</th>
-                                            <th className="py-3 pl-4 font-normal">Использование трафика</th>
+                                            <th className="py-3 px-4 font-normal">Страна</th>
                                         </tr>
                                     </thead>
                                     {isLoading &&
@@ -113,54 +95,34 @@ export default function Orders() {
                                             <tbody>
                                                 {orders?.data?.items?.map((item: any, index: number) => (
                                                     <tr key={index} className="border-b border-[#333]">
-                                                        <td className="py-4 pr-4">{item.login}</td>
-                                                        <td className="py-4 px-4">{item.password}</td>
+                                                        <td className="py-4 pr-4"><td className="py-4 pr-4">{item.package_list?.[0]?.title}</td></td>
+                                                        <td className="py-4 px-4">185.162.130.86</td>
                                                         <td className="py-4 px-4">
-                                                            <div className="flex flex-wrap gap-1">
-                                                                {expandedPorts === index ? (
-                                                                    <>
-                                                                        {item?.ports.map((port: any, i: number) => (
-                                                                            <span key={i} className="px-2 py-0.5 bg-[#333] rounded-md text-xs">
-                                                                                {port}
-                                                                            </span>
-                                                                        ))}
-                                                                        <span
-                                                                            className="px-2 py-0.5 bg-[#333] rounded-md text-xs cursor-pointer"
-                                                                            onClick={() => setExpandedPorts(null)}
-                                                                        >
-                                                                            Свернуть
-                                                                        </span>
-                                                                    </>
-                                                                ) : (
-                                                                    <>
-                                                                        {item?.ports?.slice(0, 3).map((port: number, i: number) => (
-                                                                            <span key={i} className="px-2 py-0.5 bg-[#333] rounded-md text-xs">
-                                                                                {port}
-                                                                            </span>
-                                                                        ))}
-                                                                        {item.ports && item.ports.length > 3 && (
-                                                                            <span
-                                                                                className="px-2 py-0.5 bg-[#333] rounded-md text-xs cursor-pointer"
-                                                                                onClick={() => setExpandedPorts(index)}
-                                                                            >
-                                                                                +{item?.ports?.length - 3}
-                                                                            </span>
-                                                                        )}
-                                                                    </>
-                                                                )}
-                                                            </div>
-                                                        </td>
-                                                        <td className="py-4 px-4">{formatBytes(item?.package_info?.traffic_limit)}</td>
-                                                        <td className="py-4 px-4">
-                                                            {formatBytes(item.package_info?.traffic_limit || "0")}
+                                                            SOCKS5/HTTP
                                                         </td>
                                                         <td className="py-4 px-4">
-                                                            {item.package_info?.is_active ? <Badge variant="success" className="bg-green-500/20 text-green-500 hover:bg-green-500/30">
-                                                                Активен</Badge> : <Badge variant="destructive">Неактивен</Badge>}
+                                                            {(() => {
+                                                                const ports = item.package_list?.[0]?.export?.ports;
+                                                                const start = 10000;
+
+                                                                if (!ports || ports === 0) return "—"; // или "Нет портов"
+
+                                                                if (ports >= 3) {
+                                                                    return `${start}, ..., ${start + ports - 1}`;
+                                                                }
+
+                                                                return Array.from({ length: ports }, (_, i) => start + i).join(", ");
+                                                            })()}
                                                         </td>
-                                                        <td className="py-4 px-4">ORD-{Math.floor(Math.random() * 10000)}</td>
-                                                        <td className="py-4 px-4">{formatBytes(item?.package_info?.traffic_left)}</td>
-                                                        <td className="py-4 pl-4">{formatBytes(item?.package_info?.traffic_usage)}</td>
+                                                        <td className="py-4 px-4">
+                                                            {item.package_list?.[0]?.login ?? "—"}
+                                                        </td>
+                                                        <td className="py-4 px-4">
+                                                            {item.package_list?.[0]?.password ?? "—"}
+                                                        </td>
+                                                        <td className="py-4 px-4">
+                                                            {item.package_list?.geo?.country[0] ?? "—"}
+                                                        </td>
                                                     </tr>
                                                 ))}
                                             </tbody>
