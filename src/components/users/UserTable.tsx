@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { DollarSign, Ban, ArrowBigRight, ArrowRight } from "lucide-react"
+import { DollarSign, Ban, ArrowRight } from "lucide-react"
 import type { User as UserType } from "../../types"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -12,17 +12,21 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 interface UserTableProps {
   users: UserType[]
   onBlock: (userId: string, block: boolean) => void
+  onUnblock: (userId: string, block: boolean) => void
   onBalanceAdjust: (userId: string) => void
   onOrdersClick: (userId: string) => void
   isBlocking?: boolean
+  isUnblocking?: boolean
 }
 
 export default function UserTable({
   users,
   onBlock,
+  onUnblock,
   onBalanceAdjust,
   onOrdersClick,
-  isBlocking = false
+  isBlocking = false,
+  isUnblocking = false
 }: UserTableProps) {
   const [searchTerm, setSearchTerm] = useState("")
 
@@ -74,7 +78,15 @@ export default function UserTable({
                   </TableCell>
                   <TableCell>
                     {user.isBanned ? (
-                      <span className="text-muted-foreground text-sm">Действия недоступны</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onUnblock(user.id, user.isBanned)}
+                        title="Заблокировать"
+                        disabled={isUnblocking}
+                      >
+                        <Ban size={16} />
+                      </Button>
                     ) : (
                       <div className="flex items-center gap-2">
                         <Button

@@ -58,6 +58,11 @@ export const usersApi = {
     return data;
   },
 
+  unblockUser: async (email: string, block: boolean): Promise<User> => {
+    const { data } = await apiClient.post<User>(`/user/unban`, { email, isBanned: block });
+    return data;
+  },
+
   adjustBalance: async ({ email, amount, isAddition }: BalanceAdjustmentDto): Promise<User> => {
     const { data } = await apiClient.post<User>(`/user/add-balance`, {
       email,

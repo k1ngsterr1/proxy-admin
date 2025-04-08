@@ -23,7 +23,10 @@ export default function UsersPage() {
   const [isBalanceModalOpen, setIsBalanceModalOpen] = useState(false)
   const [selectedUserEmail, setSelectedUserEmail] = useState<string>("")
   const [isBanDialogOpen, setIsBanDialogOpen] = useState(false)
+  const [isUnbanDialogOpen, setIsUnbanDialogOpen] = useState(false)
   const [userToBan, setUserToBan] = useState<{ email: string, block: boolean } | null>(null)
+  const [userToUnban, setUserToUnban] = useState<{ email: string, block: boolean } | null>(null)
+
 
   const { data: users = [], isLoading, error } = useQuery({
     queryKey: ['users'],
@@ -32,11 +35,24 @@ export default function UsersPage() {
 
 
 
-
-
   const blockMutation = useMutation({
     mutationFn: ({ id, block }: { id: string; block: boolean }) =>
       usersApi.blockUser(id, block),
+    onSuccess: (data) => {
+      const updatedUsers = users.map(user => {
+        if (user.email === data.email) {
+          return { ...user, isBanned: data.isBanned }
+        }
+        return user
+      })
+
+      queryClient.setQueryData(['users'], updatedUsers)
+    }
+  })
+
+  const unblockMutation = useMutation({
+    mutationFn: ({ id, block }: { id: string; block: boolean }) =>
+      usersApi.unblockUser(id, block),
     onSuccess: (data) => {
       const updatedUsers = users.map(user => {
         if (user.email === data.email) {
@@ -61,11 +77,31 @@ export default function UsersPage() {
     }
   }
 
+  const handleUnblockUser = (userId: string, block: boolean) => {
+    const userEmail = users.find(user => user.id === userId)?.email || ""
+    if (userEmail) {
+      if (block) {
+        setUserToUnban({ email: userEmail, block })
+        setIsUnbanDialogOpen(true)
+      } else {
+        unblockMutation.mutate({ id: userEmail, block })
+      }
+    }
+  }
+
   const confirmBanUser = () => {
     if (userToBan) {
       blockMutation.mutate({ id: userToBan.email, block: userToBan.block })
       setIsBanDialogOpen(false)
       setUserToBan(null)
+    }
+  }
+
+  const confirmUnbanUser = () => {
+    if (userToUnban) {
+      unblockMutation.mutate({ id: userToUnban.email, block: userToUnban.block })
+      setIsUnbanDialogOpen(false)
+      setUserToUnban(null)
     }
   }
 
@@ -109,7 +145,10 @@ export default function UsersPage() {
     <AdminLayout>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Пользователи</h1>
+          <div className="flex flex-row gap-x-2 items-center">
+            <h1 className="text-2xl font-bold">Пользователи</h1>
+            <span className="text-xl font-medium">{users.length}</span>
+          </div>
           <p className="text-muted-foreground">Управление пользователями системы</p>
         </div>
       </div>
@@ -130,8 +169,10 @@ export default function UsersPage() {
           users={users}
           onOrdersClick={handleOrdersClick}
           onBlock={handleBlockUser}
+          onUnblock={handleUnblockUser}
           onBalanceAdjust={handleBalanceAdjust}
           isBlocking={blockMutation.isPending}
+          isUnblocking={unblockMutation.isPending}
         />
       )}
 
@@ -168,7 +209,27 @@ export default function UsersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={isUnbanDialogOpen} onOpenChange={setIsUnbanDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Подтверждение разблокировки</AlertDialogTitle>
+            <AlertDialogDescription>
+              Вы уверены, что хотите разблокировать пользователя {userToUnban?.email}?
+              Пользователь сможет авторизоваться в системе после блокировки.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setUserToUnban(null)}>Отмена</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmUnbanUser}
+              className=" bg-green-600 text-success-foreground hover:bg-success/90"
+            >
+              Разблокировать
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminLayout>
   )
 }
-
