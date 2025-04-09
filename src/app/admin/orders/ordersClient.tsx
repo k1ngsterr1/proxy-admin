@@ -22,7 +22,6 @@ export default function Orders() {
 
     console.log(orders)
 
-
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text)
     }

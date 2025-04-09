@@ -18,7 +18,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
-import { useUserStore } from "@/components/model/user-store"
 
 export default function UsersPage() {
   const queryClient = useQueryClient()
@@ -29,15 +28,10 @@ export default function UsersPage() {
   const [userToBan, setUserToBan] = useState<{ email: string, block: boolean } | null>(null)
   const [userToUnban, setUserToUnban] = useState<{ email: string, block: boolean } | null>(null)
 
-  const { setEmail } = useUserStore()
-
-
   const { data: users = [], isLoading, error } = useQuery({
     queryKey: ['users'],
     queryFn: usersApi.getAll
   })
-
-
 
   const blockMutation = useMutation({
     mutationFn: ({ id, block }: { id: string; block: boolean }) =>
@@ -119,19 +113,14 @@ export default function UsersPage() {
 
 
   const handleOrdersClick = (userId: string) => {
-    setEmail(users.find(user => user.id === userId)?.email || "")
     console.log("Go to orders for user:", userId)
     window.location.href = `/admin/orders?userId=${userId}`
   }
 
   const handleLogsClick = (userId: string) => {
-    setEmail(users.find(user => user.id === userId)?.email || "")
-    console.log("Go to orders for user:", userId)
+    console.log("Go to logs for user:", userId)
     window.location.href = `/admin/logs?userId=${userId}`
   }
-
-
-
 
   const balanceMutation = useMutation({
     mutationFn: usersApi.adjustBalance,
