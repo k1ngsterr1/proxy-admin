@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import dayjs from 'dayjs'
 import { DollarSign, Ban, Package, FileClock } from "lucide-react"
 import type { User as UserType } from "../../types"
 import { Input } from "@/components/ui/input"
@@ -39,6 +40,8 @@ export default function UserTable({
       user.ip.includes(searchTerm),
   )
 
+
+
   return (
     <Card>
       <CardContent className="p-6">
@@ -57,6 +60,7 @@ export default function UserTable({
             <TableHeader>
               <TableRow>
                 <TableHead>Email</TableHead>
+                <TableHead>Дата создания</TableHead>
                 <TableHead>IP адрес</TableHead>
                 <TableHead>Баланс</TableHead>
                 <TableHead>Статус</TableHead>
@@ -67,6 +71,7 @@ export default function UserTable({
               {filteredUsers.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell>{user.email}</TableCell>
+                  <TableCell>{dayjs(user.createdAt).format('DD.MM.YYYY')}</TableCell>
                   <TableCell>{user.ip}</TableCell>
                   <TableCell>${typeof user.balance === 'number' ? user.balance.toFixed(2) : Number(user.balance).toFixed(2)}</TableCell>
                   <TableCell>
