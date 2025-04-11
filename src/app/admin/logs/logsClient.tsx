@@ -53,6 +53,7 @@ export default function UserLogsPage() {
                                             <TableHead>Дата</TableHead>
                                             <TableHead>Сумма</TableHead>
                                             <TableHead>Номер заказа</TableHead>
+                                            <TableHead>Цель использования</TableHead>
                                             <TableHead>Статус</TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -66,6 +67,7 @@ export default function UserLogsPage() {
                                                 </TableCell>
                                                 <TableCell className="font-medium">${Number.parseFloat(order.totalPrice).toFixed(2)}</TableCell>
                                                 <TableCell className="font-mono text-xs">{order.proxySellerId}</TableCell>
+                                                <TableCell className="font-mono text-xs">{order.goal}</TableCell>
                                                 <TableCell>
                                                     <Badge
                                                         className={
