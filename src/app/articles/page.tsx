@@ -1,5 +1,6 @@
 "use client"
 
+import { Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import { articlesApi } from "@/lib/api/articles"
@@ -7,7 +8,7 @@ import Link from "next/link"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 
-export default function ArticlesPage() {
+function InnerArticlesPage() {
   const searchParams = useSearchParams()
   const lang = searchParams.get("lang") === "en" ? "en" : "ru"
 
@@ -50,28 +51,14 @@ export default function ArticlesPage() {
           {articles.map((article, index) => (
             <Card key={index} className="flex flex-col h-full">
               <CardHeader>
-                <CardTitle className="line-clamp-2">{article.title}</CardTitle>
+                <CardTitle>{article.title}</CardTitle>
               </CardHeader>
-              {article.images && (
-                <div className="px-6 pb-4">
-                  <img
-                    src={article.images[0]}
-                    alt={article.title}
-                    className="w-full h-48 object-cover rounded-md"
-                  />
-                </div>
-              )}
-              <CardContent className="flex-grow">
-                <div
-                  className="line-clamp-4 text-muted-foreground"
-                  dangerouslySetInnerHTML={{
-                    __html: article.content.substring(0, 200) + (article.content.length > 200 ? '...' : '')
-                  }}
-                />
+              <CardContent>
+                <p className="line-clamp-3">{article.content}</p>
               </CardContent>
               <CardFooter>
-                <Link href={`/articles/${article.id}`} className="w-full">
-                  <Button variant="outline" className="w-full">Читать далее</Button>
+                <Link href={`/articles/${article.id}`}>
+                  <Button variant="outline">Читать далее</Button>
                 </Link>
               </CardFooter>
             </Card>
@@ -79,5 +66,20 @@ export default function ArticlesPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function ArticlesPage() {
+  return (
+    <Suspense fallback={
+      <div className="container mx-auto py-10">
+        <h1 className="text-3xl font-bold mb-8">Статьи</h1>
+        <div className="flex justify-center py-20">
+          <p className="text-lg text-muted-foreground">Загрузка статей...</p>
+        </div>
+      </div>
+    }>
+      <InnerArticlesPage />
+    </Suspense>
   )
 }

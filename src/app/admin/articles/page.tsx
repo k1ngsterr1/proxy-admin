@@ -1,15 +1,10 @@
-"use client"
+import { Suspense } from "react"
+import ArticlesPage from "./articlesClient"
 
-import ArticlesList from "@/components/articles/ArticlesList"
-import AdminLayout from "@/components/layout/AdminLayout"
-
-export default function ArticlesPage() {
+export default function Page() {
   return (
-    <AdminLayout>
-      <div>
-        <h1 className="text-2xl font-bold mb-6">Управление статьями</h1>
-        <ArticlesList />
-      </div>
-    </AdminLayout>
+    <Suspense fallback={<div className="p-6 text-center text-muted-foreground">Загрузка...</div>}>
+      <ArticlesPage />
+    </Suspense>
   )
 }
