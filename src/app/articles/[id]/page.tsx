@@ -19,9 +19,9 @@ export default function ArticleDetailPage() {
   if (isLoading) {
     return (
       <div className="container mx-auto py-10">
-        <Button 
-          variant="ghost" 
-          className="mb-6" 
+        <Button
+          variant="ghost"
+          className="mb-6"
           onClick={() => router.back()}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -37,9 +37,9 @@ export default function ArticleDetailPage() {
   if (error || !article) {
     return (
       <div className="container mx-auto py-10">
-        <Button 
-          variant="ghost" 
-          className="mb-6" 
+        <Button
+          variant="ghost"
+          className="mb-6"
           onClick={() => router.back()}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -54,29 +54,29 @@ export default function ArticleDetailPage() {
 
   return (
     <div className="container mx-auto py-10">
-      <Button 
-        variant="ghost" 
-        className="mb-6" 
+      <Button
+        variant="ghost"
+        className="mb-6"
         onClick={() => router.back()}
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
         Назад к статьям
       </Button>
-      
+
       <article className="prose prose-lg max-w-none">
         <h1 className="text-3xl font-bold mb-6">{article.title}</h1>
-        
-        {article.image && (
+
+        {article.images && (
           <div className="my-6">
-            <img 
-              src={article.image} 
-              alt={article.title} 
+            <img
+              src={article.images[0]}
+              alt={article.title}
               className="w-full max-h-96 object-cover rounded-lg"
             />
           </div>
         )}
-        
-        <div 
+
+        <div
           className="mt-8"
           dangerouslySetInnerHTML={{ __html: article.content }}
         />

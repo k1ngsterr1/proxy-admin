@@ -99,7 +99,7 @@ export default function Sidebar() {
                 </Link>
               )}
             </li>
-            {/* <li>
+            <li>
               {collapsed ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -120,7 +120,7 @@ export default function Sidebar() {
                   <span>Статьи</span>
                 </Link>
               )}
-            </li> */}
+            </li>
           </TooltipProvider>
         </ul>
       </nav>

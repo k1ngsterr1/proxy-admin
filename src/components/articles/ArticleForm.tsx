@@ -13,16 +13,16 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 interface ArticleFormProps {
   article?: Article
   isEditing?: boolean
+  lang?: 'ru' | 'en'
 }
 
-export default function ArticleForm({ article, isEditing = false }: ArticleFormProps) {
+export default function ArticleForm({ article, isEditing = false, lang = 'ru' }: ArticleFormProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
   const [title, setTitle] = useState(article?.title || "")
   const [content, setContent] = useState(article?.content || "")
   const [images, setImages] = useState<string[]>(article?.images || [])
   const [imageFile, setImageFile] = useState<File | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // This function is now just for display purposes
   const extractImagesFromContent = (htmlContent: string): string[] => {
@@ -39,7 +39,7 @@ export default function ArticleForm({ article, isEditing = false }: ArticleFormP
     console.log('Extracted image URLs:', imageUrls)
     return imageUrls
   }
-  
+
   // Функция для преобразования URL в File
   const urlToFile = async (url: string, filename: string, mimeType: string): Promise<File> => {
     const response = await fetch(url)
@@ -52,7 +52,7 @@ export default function ArticleForm({ article, isEditing = false }: ArticleFormP
     // Только при первой загрузке для редактирования
     if (isEditing && article?.images && article.images.length > 0) {
       console.log('Article has images:', article.images)
-      
+
       // Создаем новый HTML с изображениями
       // Добавляем изображения в начало контента, чтобы они были видны
       let imageHtml = '';
@@ -62,22 +62,23 @@ export default function ArticleForm({ article, isEditing = false }: ArticleFormP
           imageHtml += `<div><img src="${imageUrl}" alt="Article image" /></div>`
         }
       })
-      
+
       // Создаем новый контент с изображениями в начале
       const newContent = imageHtml + content
-      
+
       // Обновляем контент в редакторе
       console.log('Setting new content with images at the beginning')
       setContent(newContent)
     }
-    
+
     // Извлекаем URL изображений из контента для отслеживания
     const extractedImages = extractImagesFromContent(content)
     setImages(extractedImages)
   }, [isEditing, article])
 
   const createMutation = useMutation({
-    mutationFn: articlesApi.create,
+    mutationFn: (article: CreateArticleDto) =>
+      articlesApi.create(article), // без language
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['articles'] })
       router.push("/admin/articles")
@@ -115,11 +116,11 @@ export default function ArticleForm({ article, isEditing = false }: ArticleFormP
       const tempDiv = document.createElement('div')
       tempDiv.innerHTML = content
       const imgElements = tempDiv.querySelectorAll('img')
-      
+
       // Получаем первое изображение с data URL или URL
       let imageFile: File | null = null
       let imageUrl: string | null = null
-      
+
       // Проверяем все изображения в контенте
       for (const img of Array.from(imgElements)) {
         // Если это data URL, преобразуем его в File
@@ -134,7 +135,7 @@ export default function ArticleForm({ article, isEditing = false }: ArticleFormP
           } catch (err) {
             console.error('Error converting data URL to file:', err)
           }
-        } 
+        }
         // Если это обычный URL (при редактировании), сохраняем его
         else if (img.src.startsWith('http')) {
           imageUrl = img.src
@@ -146,6 +147,7 @@ export default function ArticleForm({ article, isEditing = false }: ArticleFormP
       const articleData: CreateArticleDto | UpdateArticleDto = {
         title,
         content,
+        lang
       }
 
       // Добавляем изображение из редактора (только одно)
@@ -161,7 +163,7 @@ export default function ArticleForm({ article, isEditing = false }: ArticleFormP
           const imageFileName = imageUrl.split('/').pop() || 'existing-image.jpg'
           const imageFileType = 'image/jpeg' // Предполагаем JPEG, но можно определить по расширению
           const imageFileObj = await urlToFile(imageUrl, imageFileName, imageFileType)
-          
+
           // Добавляем преобразованный файл в данные статьи
           articleData.images = imageFileObj
           console.log('Successfully converted URL to File for PATCH request')

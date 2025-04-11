@@ -25,7 +25,6 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  // Increase maximum content size
   maxContentLength: Infinity,
   maxBodyLength: Infinity,
 });
@@ -36,12 +35,13 @@ apiClient.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
-    // For FormData, let the browser set the Content-Type with boundary
+
     if (config.data instanceof FormData) {
-      delete config.headers['Content-Type'];
+      if (config.headers) {
+        delete config.headers['Content-Type'];
+      }
     }
-    
+    console.log("Sending headers:", config.headers);
     return config;
   },
   (error) => {

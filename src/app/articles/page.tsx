@@ -1,5 +1,6 @@
 "use client"
 
+import { useSearchParams } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import { articlesApi } from "@/lib/api/articles"
 import Link from "next/link"
@@ -7,9 +8,12 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Button } from "@/components/ui/button"
 
 export default function ArticlesPage() {
+  const searchParams = useSearchParams()
+  const lang = searchParams.get("lang") === "en" ? "en" : "ru"
+
   const { data: articles = [], isLoading, error } = useQuery({
-    queryKey: ['public-articles'],
-    queryFn: articlesApi.getAll
+    queryKey: ['public-articles', lang],
+    queryFn: () => articlesApi.getAll(lang),
   })
 
   if (isLoading) {
@@ -34,8 +38,6 @@ export default function ArticlesPage() {
     )
   }
 
-  console.log(articles)
-
   return (
     <div className="container mx-auto py-10">
       <h1 className="text-3xl font-bold mb-8">Статьи</h1>
@@ -50,10 +52,10 @@ export default function ArticlesPage() {
               <CardHeader>
                 <CardTitle className="line-clamp-2">{article.title}</CardTitle>
               </CardHeader>
-              {article.image && (
+              {article.images && (
                 <div className="px-6 pb-4">
                   <img
-                    src={article.image}
+                    src={article.images[0]}
                     alt={article.title}
                     className="w-full h-48 object-cover rounded-md"
                   />

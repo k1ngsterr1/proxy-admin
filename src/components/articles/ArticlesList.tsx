@@ -9,14 +9,17 @@ import { Plus, Edit, Trash2 } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { articlesApi } from "@/lib/api/articles"
+import { useRouter } from "next/navigation"
 
 export default function ArticlesList() {
   const queryClient = useQueryClient()
+  const router = useRouter()
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [lang, setLang] = useState<'ru' | 'en'>('ru')
 
   const { data: articles = [], isLoading, error } = useQuery({
-    queryKey: ['articles'],
-    queryFn: articlesApi.getAll
+    queryKey: ['articles', lang],
+    queryFn: () => articlesApi.getAll(lang)
   })
 
   const deleteMutation = useMutation({
@@ -33,14 +36,51 @@ export default function ArticlesList() {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Статьи</CardTitle>
-        <Link href="/admin/articles/new">
-          <Button size="sm">
-            <Plus size={16} className="mr-2" />
-            Новая статья
-          </Button>
-        </Link>
+      <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-4">
+          <CardTitle>Статьи</CardTitle>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant={lang === 'ru' ? 'default' : 'outline'}
+              onClick={() => setLang('ru')}
+            >
+              🇷🇺 Рус
+            </Button>
+            <Button
+              size="sm"
+              variant={lang === 'en' ? 'default' : 'outline'}
+              onClick={() => setLang('en')}
+            >
+              🇺🇸 Eng
+            </Button>
+          </div>
+        </div>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button size="sm">
+              <Plus size={16} className="mr-2" />
+              Новая статья
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Создать статью</DialogTitle>
+            </DialogHeader>
+            <div className="flex flex-col gap-4 mt-4">
+              <Link href="/admin/articles/new?lang=ru">
+                <Button variant="outline" className="w-full">
+                  🇷🇺 На русском
+                </Button>
+              </Link>
+              <Link href="/admin/articles/new?lang=en">
+                <Button variant="outline" className="w-full">
+                  🇺🇸 На английском
+                </Button>
+              </Link>
+            </div>
+          </DialogContent>
+        </Dialog>
       </CardHeader>
       <CardContent>
         {isLoading ? (

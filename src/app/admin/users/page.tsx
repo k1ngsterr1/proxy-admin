@@ -219,7 +219,7 @@ export default function UsersPage() {
             <AlertDialogTitle>Подтверждение разблокировки</AlertDialogTitle>
             <AlertDialogDescription>
               Вы уверены, что хотите разблокировать пользователя {userToUnban?.email}?
-              Пользователь сможет авторизоваться в системе после блокировки.
+              Пользователь сможет авторизоваться в системе после разблокировки.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
