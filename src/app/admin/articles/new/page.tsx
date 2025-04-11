@@ -1,19 +1,10 @@
-"use client"
+import { Suspense } from "react"
+import NewArticlePage from "./newClient"
 
-import ArticleForm from "@/components/articles/ArticleForm"
-import AdminLayout from "@/components/layout/AdminLayout"
-import { useSearchParams } from "next/navigation"
-
-export default function NewArticlePage() {
-  const searchParams = useSearchParams()
-  const lang = searchParams.get("lang") === "en" ? "en" : "ru"
-
+export default function Page() {
   return (
-    <AdminLayout>
-      <div>
-        <h1 className="text-2xl font-bold mb-6">Создать новую статью</h1>
-        <ArticleForm lang={lang} />
-      </div>
-    </AdminLayout>
+    <Suspense fallback={<div className="p-6 text-center text-muted-foreground">Загрузка...</div>}>
+      <NewArticlePage />
+    </Suspense>
   )
 }
