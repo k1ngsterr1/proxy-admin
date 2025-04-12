@@ -18,3 +18,8 @@ export const useGetLogs = (userId: string) => {
         }
     )
 }
+
+export const getGeneralLogs = async () => {
+  const { data } = await apiClient.get('/orders/admin/general-log');
+  return data;
+};

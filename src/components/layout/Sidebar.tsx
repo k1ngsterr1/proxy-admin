@@ -4,7 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
-import { Users, Tag, Activity, Settings, LogOut, DollarSign, Server, FileText, BookOpen } from "lucide-react"
+import { Users, Tag, Activity, Settings, LogOut, DollarSign, Server, FileText, BookOpen, FileClock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
@@ -104,6 +104,31 @@ export default function Sidebar() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Link
+                      href="/admin/logs-general"
+                      className={`sidebar-link ${isActive("/admin/logs-general") ? "active" : ""}`}
+                    >
+                      <FileClock size={20} />
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    <p>Логи</p>
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
+                <Link
+                  href='/admin/logs-general'
+                  className={`sidebar-link ${isActive("/admin/logs-general") ? "active" : ""}`}
+                >
+                  <FileClock size={20} />
+                  <span>Логи</span>
+                </Link>
+              )}
+            </li>
+            {/* <li>
+              {collapsed ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link
                       href="/admin/articles"
                       className={`sidebar-link ${isActive("/admin/articles") ? "active" : ""}`}
                     >
@@ -120,7 +145,7 @@ export default function Sidebar() {
                   <span>Статьи</span>
                 </Link>
               )}
-            </li>
+            </li> */}
           </TooltipProvider>
         </ul>
       </nav>

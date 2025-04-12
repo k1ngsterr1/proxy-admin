@@ -50,6 +50,7 @@ export default function UserLogsPage() {
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead className="w-[180px]">ID заказа</TableHead>
+                                            <TableHead className="w-[180px]">Тип заказа</TableHead>
                                             <TableHead>Дата</TableHead>
                                             <TableHead>Сумма</TableHead>
                                             <TableHead>Номер заказа</TableHead>
@@ -61,12 +62,13 @@ export default function UserLogsPage() {
                                         {logs?.orders?.map((order: any) => (
                                             <TableRow key={order.id}>
                                                 <TableCell className="font-mono text-xs">{order.id}</TableCell>
+                                                <TableCell className="font-mono text-xs">{order.type}</TableCell>
                                                 <TableCell>
                                                     {new Date(order.createdAt).toLocaleDateString()}{" "}
                                                     {new Date(order.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                                                 </TableCell>
                                                 <TableCell className="font-medium">${Number.parseFloat(order.totalPrice).toFixed(2)}</TableCell>
-                                                <TableCell className="font-mono text-xs">{order.proxySellerId}</TableCell>
+                                                <TableCell className="font-mono text-xs">{order.orderId ?? 'N/A'}</TableCell>
                                                 <TableCell className="font-mono text-xs">{order.goal}</TableCell>
                                                 <TableCell>
                                                     <Badge
