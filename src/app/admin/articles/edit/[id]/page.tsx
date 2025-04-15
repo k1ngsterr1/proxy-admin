@@ -46,7 +46,8 @@ export default function EditArticlePage() {
     <AdminLayout>
       <div>
         <h1 className="text-2xl font-bold mb-6">Редактирование статьи</h1>
-        <ArticleForm article={article} isEditing={true} />
+        {/* Явно передаем язык из существующей статьи */}
+        <ArticleForm article={article} isEditing={true} lang={article?.lang} />
       </div>
     </AdminLayout>
   )

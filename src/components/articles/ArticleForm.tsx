@@ -19,6 +19,9 @@ interface ArticleFormProps {
 export default function ArticleForm({ article, isEditing = false, lang = 'ru' }: ArticleFormProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
+  
+  // Если редактируем статью, берем язык из статьи, иначе используем пропс lang
+  const [articleLang, setArticleLang] = useState<'ru' | 'en'>(article?.lang || lang)
   const [title, setTitle] = useState(article?.title || "")
   const [content, setContent] = useState(article?.content || "")
   const [images, setImages] = useState<string[]>(article?.images || [])
@@ -49,6 +52,12 @@ export default function ArticleForm({ article, isEditing = false, lang = 'ru' }:
 
   // При инициализации компонента для редактирования, добавляем существующие изображения в контент
   useEffect(() => {
+    // Если редактируем статью, обновляем язык из статьи
+    if (isEditing && article?.lang) {
+      console.log('Setting language from article:', article.lang)
+      setArticleLang(article.lang)
+    }
+    
     // Только при первой загрузке для редактирования
     if (isEditing && article?.images && article.images.length > 0) {
       console.log('Article has images:', article.images)
@@ -111,18 +120,52 @@ export default function ArticleForm({ article, isEditing = false, lang = 'ru' }:
         submitButton.disabled = true
         submitButton.textContent = 'Сохранение...'
       }
+      
+      console.log('Submitting article with language:', articleLang)
 
       // Получаем изображения из редактора
       const tempDiv = document.createElement('div')
       tempDiv.innerHTML = content
       const imgElements = tempDiv.querySelectorAll('img')
 
-      // Получаем первое изображение с data URL или URL
+      // Решение проблемы с дублированием изображений
+      // Создаем новый документ без изображений для отправки на сервер
+      const contentWithoutImages = document.createElement('div')
+      contentWithoutImages.innerHTML = content
+      
+      // Собираем все изображения из контента
+      const allImages = contentWithoutImages.querySelectorAll('img')
+      
+      // Удаляем дубликаты изображений
+      const uniqueImgSrcs = new Set<string>()
+      const uniqueImages: HTMLImageElement[] = []
+      
+      // Собираем уникальные изображения
+      Array.from(allImages).forEach(img => {
+        if (!uniqueImgSrcs.has(img.src)) {
+          uniqueImgSrcs.add(img.src)
+          uniqueImages.push(img as HTMLImageElement)
+        }
+      })
+      
+      // Удаляем все изображения из контента для отправки на сервер
+      Array.from(allImages).forEach(img => {
+        const parent = img.parentElement
+        if (parent) {
+          parent.removeChild(img)
+        }
+      })
+      
+      // Контент без изображений для отправки на сервер
+      const contentWithoutImagesHtml = contentWithoutImages.innerHTML
+      console.log('Content without images:', contentWithoutImagesHtml.substring(0, 100) + '...')
+      
+      // Получаем первое изображение с data URL или URL для загрузки
       let imageFile: File | null = null
       let imageUrl: string | null = null
-
-      // Проверяем все изображения в контенте
-      for (const img of Array.from(imgElements)) {
+      
+      // Проверяем все уникальные изображения
+      for (const img of uniqueImages) {        
         // Если это data URL, преобразуем его в File
         if (img.src.startsWith('data:image')) {
           try {
@@ -146,9 +189,11 @@ export default function ArticleForm({ article, isEditing = false, lang = 'ru' }:
       // Создаем данные статьи
       const articleData: CreateArticleDto | UpdateArticleDto = {
         title,
-        content,
-        lang
+        content: contentWithoutImagesHtml, // Отправляем контент без изображений
+        lang: articleLang // Используем язык из состояния, который учитывает язык статьи при редактировании
       }
+      
+      console.log('Article data with language:', articleData.lang)
 
       // Добавляем изображение из редактора (только одно)
       if (imageFile) {

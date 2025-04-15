@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Bold,
@@ -14,19 +14,22 @@ import {
   FileImage,
   Pilcrow,
   TextQuote,
-  Code
+  Code,
+  Link as LinkIcon
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
 
 // Tiptap imports
-import { useEditor, EditorContent } from '@tiptap/react'
+import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
 import Link from '@tiptap/extension-link'
 import Placeholder from '@tiptap/extension-placeholder'
 import TextStyle from '@tiptap/extension-text-style'
 import Color from '@tiptap/extension-color'
+import axios from '@/lib/axios'
 
 // Add custom CSS for the editor
 import "./editor.css"
@@ -40,6 +43,11 @@ export default function ArticleEditor({ content, onChange }: ArticleEditorProps)
   const [imageDialogOpen, setImageDialogOpen] = useState(false)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false)
+  const [linkUrl, setLinkUrl] = useState('')
+  const [linkText, setLinkText] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Инициализация редактора Tiptap
   const editor = useEditor({
@@ -54,10 +62,22 @@ export default function ArticleEditor({ content, onChange }: ArticleEditorProps)
           keepMarks: true,
           keepAttributes: true,
         },
+        // Улучшаем обработку удаления
+        history: {
+          depth: 100,
+          newGroupDelay: 500
+        }
       }),
-      Image,
+      Image.configure({
+        inline: true,
+        allowBase64: true
+      }),
       Link.configure({
-        openOnClick: false,
+        openOnClick: true,
+        HTMLAttributes: {
+          rel: 'noopener noreferrer',
+          class: 'text-blue-500 underline'
+        }
       }),
       Placeholder.configure({
         placeholder: 'Начните писать статью здесь...',
@@ -69,18 +89,30 @@ export default function ArticleEditor({ content, onChange }: ArticleEditorProps)
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML())
     },
+    editorProps: {
+      handleDOMEvents: {
+        keydown: (_, event) => {
+          // Улучшение обработки удаления
+          if (event.key === 'Backspace' || event.key === 'Delete') {
+            // Позволяем стандартной обработке продолжиться
+            return false
+          }
+          return false
+        }
+      }
+    }
   })
   
   // При изменении содержимого обновляем редактор
   useEffect(() => {
     if (editor && content) {
-      console.log('Editor content updated, setting content:', content.substring(0, 100) + '...')
-      // Принудительно обновляем содержимое редактора
-      editor.commands.setContent(content)
-      
-      // Проверяем, есть ли в контенте изображения
-      const hasImages = content.includes('<img')
-      console.log('Content has images:', hasImages)
+      // Проверяем, отличается ли текущее содержимое от нового
+      const currentContent = editor.getHTML()
+      if (currentContent !== content) {
+        console.log('Editor content updated, setting content:', content.substring(0, 100) + '...')
+        // Принудительно обновляем содержимое редактора
+        editor.commands.setContent(content)
+      }
     }
   }, [editor, content])
 
@@ -99,26 +131,91 @@ export default function ArticleEditor({ content, onChange }: ArticleEditorProps)
     }
   }
 
-  // Никакой отдельной загрузки изображений - они будут отправлены вместе со статьей
+  // Загрузка изображения на сервер
+  const uploadImage = async () => {
+    if (!imageFile) return null
+    
+    try {
+      setIsUploading(true)
+      
+      const formData = new FormData()
+      formData.append('image', imageFile)
+      
+      const response = await axios.post('/api/upload-image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+      
+      return response.data.imageUrl
+    } catch (error) {
+      console.error('Error uploading image:', error)
+      return null
+    } finally {
+      setIsUploading(false)
+    }
+  }
 
   // Добавление изображения в редактор
-  const insertImage = () => {
-    if (imagePreview && imageFile && editor) {
-      // Просто вставляем изображение в редактор
-      editor.chain().focus().setImage({ 
-        src: imagePreview, // Используем предпросмотр для отображения
-        alt: imageFile.name || 'Uploaded image',
-        title: imageFile.name || 'Uploaded image',
-      }).run()
+  const insertImage = async () => {
+    if (imageFile && editor) {
+      // Загружаем изображение на сервер
+      const imageUrl = await uploadImage()
       
-      // Обновляем содержимое
-      const html = editor.getHTML()
-      onChange(html)
+      // Если загрузка не удалась, используем предпросмотр
+      const src = imageUrl || imagePreview
+      
+      if (src) {
+        // Вставляем изображение в редактор
+        editor.chain().focus().setImage({ 
+          src: src,
+          alt: imageFile.name || 'Uploaded image',
+          title: imageFile.name || 'Uploaded image',
+        }).run()
+        
+        // Обновляем содержимое
+        const html = editor.getHTML()
+        onChange(html)
+      }
       
       // Закрываем диалог
       setImageDialogOpen(false)
       setImageFile(null)
       setImagePreview(null)
+    }
+  }
+  
+  // Функция для добавления ссылки
+  const insertLink = () => {
+    if (editor && linkUrl) {
+      // Если текст ссылки не указан, используем URL
+      const text = linkText || linkUrl
+      
+      // Если есть выделенный текст, делаем его ссылкой
+      if (editor.state.selection.empty && text) {
+        // Вставляем новый текст как ссылку
+        editor
+          .chain()
+          .focus()
+          .insertContent(`<a href="${linkUrl}" target="_blank">${text}</a>`)
+          .run()
+      } else {
+        // Делаем выделенный текст ссылкой
+        editor
+          .chain()
+          .focus()
+          .setLink({ href: linkUrl, target: '_blank' })
+          .run()
+      }
+      
+      // Обновляем содержимое
+      const html = editor.getHTML()
+      onChange(html)
+      
+      // Закрываем диалог и сбрасываем поля
+      setLinkDialogOpen(false)
+      setLinkUrl('')
+      setLinkText('')
     }
   }
 
@@ -134,6 +231,7 @@ export default function ArticleEditor({ content, onChange }: ArticleEditorProps)
   const toggleCodeBlock = () => editor?.chain().focus().toggleCodeBlock().run()
   const undo = () => editor?.chain().focus().undo().run()
   const redo = () => editor?.chain().focus().redo().run()
+  const unsetLink = () => editor?.chain().focus().unsetLink().run()
 
   return (
     <div className="border border-border rounded-md overflow-hidden">
@@ -232,6 +330,7 @@ export default function ArticleEditor({ content, onChange }: ArticleEditorProps)
             </DialogHeader>
             <div className="flex flex-col gap-4">
               <Input
+                ref={fileInputRef}
                 type="file"
                 accept="image/*"
                 onChange={handleImageChange}
@@ -248,11 +347,72 @@ export default function ArticleEditor({ content, onChange }: ArticleEditorProps)
               )}
               <Button
                 onClick={insertImage}
-                disabled={!imagePreview}
+                disabled={!imagePreview || isUploading}
                 className="image-upload-button"
               >
-                Добавить
+                {isUploading ? 'Загрузка...' : 'Добавить'}
               </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+        
+        {/* Кнопка для добавления ссылки */}
+        <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
+          <DialogTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              title="Добавить ссылку"
+              className={editor?.isActive('link') ? 'bg-accent' : ''}
+            >
+              <LinkIcon size={16} />
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Добавить ссылку</DialogTitle>
+            </DialogHeader>
+            <div className="flex flex-col gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="url">URL</Label>
+                <Input
+                  id="url"
+                  type="url"
+                  placeholder="https://example.com"
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="text">Текст ссылки (опционально)</Label>
+                <Input
+                  id="text"
+                  type="text"
+                  placeholder="Текст ссылки"
+                  value={linkText}
+                  onChange={(e) => setLinkText(e.target.value)}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={insertLink}
+                  disabled={!linkUrl}
+                  className="flex-1"
+                >
+                  Добавить
+                </Button>
+                {editor?.isActive('link') && (
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      unsetLink();
+                      setLinkDialogOpen(false);
+                    }}
+                  >
+                    Удалить ссылку
+                  </Button>
+                )}
+              </div>
             </div>
           </DialogContent>
         </Dialog>
@@ -277,6 +437,26 @@ export default function ArticleEditor({ content, onChange }: ArticleEditorProps)
 
       {/* Редактор Tiptap */}
       <div className="tiptap-editor-wrapper">
+        {editor && (
+          <BubbleMenu editor={editor} tippyOptions={{ duration: 100 }}>
+            <div className="flex bg-white border rounded-md shadow-sm">
+              <Button variant="ghost" size="sm" onClick={toggleBold}>
+                <Bold size={14} />
+              </Button>
+              <Button variant="ghost" size="sm" onClick={toggleItalic}>
+                <Italic size={14} />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setLinkDialogOpen(true)}
+                className={editor.isActive('link') ? 'bg-accent' : ''}
+              >
+                <LinkIcon size={14} />
+              </Button>
+            </div>
+          </BubbleMenu>
+        )}
         <EditorContent editor={editor} className="p-4 min-h-[400px] prose max-w-none editor-content" />
       </div>
 
@@ -354,6 +534,18 @@ export default function ArticleEditor({ content, onChange }: ArticleEditorProps)
           padding: 0.75rem;
           font-family: monospace;
           overflow-x: auto;
+        }
+        
+        /* Стилизация ссылок */
+        .tiptap-editor-wrapper .ProseMirror a {
+          color: #3b82f6;
+          text-decoration: underline;
+          cursor: pointer;
+        }
+        
+        /* Улучшение выделения текста */
+        .tiptap-editor-wrapper .ProseMirror ::selection {
+          background: rgba(59, 130, 246, 0.2);
         }
       `}</style>
     </div>
