@@ -1,24 +1,31 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import dayjs from 'dayjs'
-import { DollarSign, Ban, Package, FileClock } from "lucide-react"
-import type { User as UserType } from "../../types"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useState } from "react";
+import dayjs from "dayjs";
+import { DollarSign, Ban, Package, FileClock } from "lucide-react";
+import type { User as UserType } from "../../types";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface UserTableProps {
-  users: UserType[]
-  onBlock: (userId: string, block: boolean) => void
-  onUnblock: (userId: string, block: boolean) => void
-  onBalanceAdjust: (userId: string) => void
-  onOrdersClick: (userId: string) => void
-  onLogsClick: (userId: string) => void
-  isBlocking?: boolean
-  isUnblocking?: boolean
+  users: UserType[];
+  onBlock: (userId: string, block: boolean) => void;
+  onUnblock: (userId: string, block: boolean) => void;
+  onBalanceAdjust: (userId: string) => void;
+  onOrdersClick: (userId: string) => void;
+  onLogsClick: (userId: string) => void;
+  isBlocking?: boolean;
+  isUnblocking?: boolean;
 }
 
 export default function UserTable({
@@ -29,18 +36,24 @@ export default function UserTable({
   onOrdersClick,
   onLogsClick,
   isBlocking = false,
-  isUnblocking = false
+  isUnblocking = false,
 }: UserTableProps) {
-  const [searchTerm, setSearchTerm] = useState("")
+  const [searchTerm, setSearchTerm] = useState("");
 
+  // Filter users based on search term
   const filteredUsers = users.filter(
     (user) =>
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (user.name ? user.name.toLowerCase().includes(searchTerm.toLowerCase()) : false) ||
-      user.ip.includes(searchTerm),
-  )
+      (user.name
+        ? user.name.toLowerCase().includes(searchTerm.toLowerCase())
+        : false) ||
+      user.ip.includes(searchTerm)
+  );
 
-
+  // Sort users by creation date (newest first)
+  const sortedUsers = [...filteredUsers].sort((a, b) => {
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
 
   return (
     <Card>
@@ -68,17 +81,27 @@ export default function UserTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsers.map((user) => (
+              {sortedUsers.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell>{user.email}</TableCell>
-                  <TableCell>{dayjs(user.createdAt).format('DD.MM.YYYY')}</TableCell>
+                  <TableCell>
+                    {dayjs(user.createdAt).format("DD.MM.YYYY")}
+                  </TableCell>
                   <TableCell>{user.ip}</TableCell>
-                  <TableCell>${typeof user.balance === 'number' ? user.balance.toFixed(2) : Number(user.balance).toFixed(2)}</TableCell>
+                  <TableCell>
+                    $
+                    {typeof user.balance === "number"
+                      ? user.balance.toFixed(2)
+                      : Number(user.balance).toFixed(2)}
+                  </TableCell>
                   <TableCell>
                     {user.isBanned ? (
                       <Badge variant="destructive">Заблокирован</Badge>
                     ) : (
-                      <Badge variant="success" className="bg-green-500/20 text-green-500 hover:bg-green-500/30">
+                      <Badge
+                        variant="success"
+                        className="bg-green-500/20 text-green-500 hover:bg-green-500/30"
+                      >
                         Активен
                       </Badge>
                     )}
@@ -89,7 +112,7 @@ export default function UserTable({
                         variant="ghost"
                         size="icon"
                         onClick={() => onUnblock(user.id, user.isBanned)}
-                        title="Заблокировать"
+                        title="Разблокировать"
                         disabled={isUnblocking}
                       >
                         <Ban size={16} />
@@ -120,7 +143,7 @@ export default function UserTable({
                           onClick={() => onOrdersClick(user.id)}
                           disabled={isBlocking}
                         >
-                          <Package />
+                          <Package size={16} />
                         </Button>
                         <Button
                           variant="ghost"
@@ -129,7 +152,7 @@ export default function UserTable({
                           onClick={() => onLogsClick(user.id)}
                           disabled={isBlocking}
                         >
-                          <FileClock />
+                          <FileClock size={16} />
                         </Button>
                       </div>
                     )}
@@ -141,6 +164,5 @@ export default function UserTable({
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
-
