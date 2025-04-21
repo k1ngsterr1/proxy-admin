@@ -127,15 +127,18 @@ export default function UserTable({
                         >
                           <DollarSign size={16} />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onBlock(user.id, !user.isBanned)}
-                          title="Заблокировать"
-                          disabled={isBlocking}
-                        >
-                          <Ban size={16} />
-                        </Button>
+                        {/* Hide ban button for specific user */}
+                        {user.email !== "ipv4proxy@gmail.com" && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onBlock(user.id, !user.isBanned)}
+                            title="Заблокировать"
+                            disabled={isBlocking}
+                          >
+                            <Ban size={16} />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
