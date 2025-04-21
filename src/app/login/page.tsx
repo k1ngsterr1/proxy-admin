@@ -1,41 +1,57 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Image from "next/image"
-import { useRouter } from "next/navigation"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { useLogin } from "@/lib/auth"
+import type React from "react";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { useLogin } from "@/lib/auth";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
-  const router = useRouter()
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const router = useRouter();
 
-  const loginMutation = useLogin()
-  const loading = loginMutation.isPending
+  const loginMutation = useLogin();
+  const loading = loginMutation.isPending;
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
+    e.preventDefault();
+    setError("");
+
+    if (email !== "ipv4proxy@gmail.com") {
+      setError("Доступ запрещен. Неверный email адрес.");
+      return;
+    }
 
     try {
-      await loginMutation.mutateAsync({ email, password }, {
-        onSuccess: () => {
-          router.push('/admin')
-        },
-        onError: (error) => {
-          setError(error.message || 'Неверный email или пароль')
+      await loginMutation.mutateAsync(
+        { email, password },
+        {
+          onSuccess: () => {
+            router.push("/admin");
+          },
+          onError: (error) => {
+            setError(error.message || "Неверный email или пароль");
+          },
         }
-      })
+      );
     } catch (err) {
-      setError("Произошла ошибка при входе")
-      console.error('Ошибка аутентификации:', err)
+      setError("Произошла ошибка при входе");
+      console.error("Ошибка аутентификации:", err);
     }
-  }
+  };
 
   return (
     <div className="flex h-screen bg-background">
@@ -66,7 +82,7 @@ export default function LoginPage() {
                     <Input
                       id="email"
                       type="email"
-                      placeholder="admin@proxy.luxe"
+                      placeholder="ipv4proxy@gmail.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
@@ -84,7 +100,9 @@ export default function LoginPage() {
                     />
                   </div>
                   {error && (
-                    <div className="text-destructive text-sm font-medium py-1">{error}</div>
+                    <div className="text-destructive text-sm font-medium py-1">
+                      {error}
+                    </div>
                   )}
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? "Вход..." : "Войти"}
@@ -101,5 +119,5 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
