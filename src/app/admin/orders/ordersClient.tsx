@@ -58,10 +58,9 @@ export default function Orders() {
         const login = proxy.login || "user";
         const password = proxy.password || "pass";
         const port = protocol === "socks" ? proxy.port_socks : proxy.port_http;
-        const fullIp = `${proxy.ip}:${port}`;
 
-        contentFirstFormat += `${fullIp}:${login}:${password}\n`;
-        contentSecondFormat += `${protocol}://${login}:${password}@${fullIp}\n`;
+        contentFirstFormat += `${proxy.ip}:${port}:${login}:${password}\n`;
+        contentSecondFormat += `${protocol}://${login}:${password}@${proxy.ip}:${port}\n`;
       }
     });
 
