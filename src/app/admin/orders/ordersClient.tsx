@@ -59,8 +59,14 @@ export default function Orders() {
         const password = proxy.password || "pass";
         const port = protocol === "socks" ? proxy.port_socks : proxy.port_http;
 
-        contentFirstFormat += `${proxy.ip}:${port}:${login}:${password}\n`;
-        contentSecondFormat += `${protocol}://${login}:${password}@${proxy.ip}:${port}\n`;
+        if (proxy.type === "isp") {
+          const full_ip = proxy.ip + (port ? `:${port}` : "");
+          contentFirstFormat += `${full_ip}:${login}:${password}\n`;
+          contentSecondFormat += `${protocol}://${login}:${password}@${full_ip}\n`;
+        } else {
+          contentFirstFormat += `${proxy.ip}:${login}:${password}\n`;
+          contentSecondFormat += `${protocol}://${login}:${password}@${proxy.ip}\n`;
+        }
       }
     });
 
