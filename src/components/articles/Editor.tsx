@@ -175,54 +175,60 @@ export default function ArticleEditor({
           fullContent: content,
         });
 
-        // Принудительно обновляем содержимое редактора
-        // Используем setTimeout чтобы избежать конфликтов с обновлением
+        // НОВЫЙ ПОДХОД: Программное создание контента с изображениями
         setTimeout(() => {
-          console.log(
-            "⚡ Trying alternative approach: clear + insertContent..."
-          );
+          console.log("🎯 NEW APPROACH: Programmatic content building...");
 
           // Очищаем редактор
           editor.commands.clearContent();
 
-          // Добавляем контент через insertContent
-          editor.commands.insertContent(content);
+          // Парсим контент и обрабатываем изображения программно
+          const tempDiv = document.createElement("div");
+          tempDiv.innerHTML = content;
 
-          // Проверяем, что получилось
-          setTimeout(() => {
-            const newContent = editor.getHTML();
-            const newHasImages = newContent.includes("<img");
-            console.log("📋 After clear + insertContent:", {
-              newContentLength: newContent.length,
-              newHasImages,
-              newContent: newContent.substring(0, 200) + "...",
-              fullNewContent: newContent,
+          // Находим все изображения
+          const images = tempDiv.querySelectorAll("img");
+          const imageData = Array.from(images).map((img) => ({
+            src: img.getAttribute("src") || "",
+            alt: img.getAttribute("alt") || "Article image",
+          }));
+
+          // Удаляем изображения из HTML для текстовой части
+          images.forEach((img) => img.remove());
+
+          // Получаем чистый текстовый контент
+          const textContent = tempDiv.innerHTML;
+
+          console.log("📝 Processing content:", {
+            textContent: textContent.substring(0, 100),
+            imageCount: imageData.length,
+            images: imageData,
+          });
+
+          // Сначала вставляем текстовый контент
+          if (textContent.trim()) {
+            editor.commands.insertContent(textContent);
+          }
+
+          // Затем добавляем изображения в конец
+          imageData.forEach((imgData, index) => {
+            console.log(`📸 Adding image ${index + 1}:`, imgData.src);
+
+            // Добавляем пустой параграф перед изображением
+            editor.commands.insertContent("<p></p>");
+
+            // Добавляем изображение
+            editor.commands.setImage({
+              src: imgData.src,
+              alt: imgData.alt,
             });
 
-            // Если все еще нет изображений, попробуем setContent
-            if (!newHasImages && content.includes("<img")) {
-              console.log(
-                "🔄 Still no images, trying setContent as fallback..."
-              );
-              editor.commands.setContent(content, false);
+            // Добавляем пустой параграф после изображения для редактирования
+            editor.commands.insertContent("<p></p>");
+          });
 
-              setTimeout(() => {
-                const finalContent = editor.getHTML();
-                console.log("📋 After setContent fallback:", {
-                  finalHasImages: finalContent.includes("<img"),
-                  finalContent: finalContent.substring(0, 200) + "...",
-                });
-              }, 50);
-            }
-
-            const doc = editor.state.doc;
-            const lastNode = doc.lastChild;
-
-            if (lastNode && lastNode.type.name === "image") {
-              editor.commands.insertContentAt(doc.content.size, "<p></p>");
-            }
-          }, 50);
-        }, 0);
+          console.log("✅ Content setup complete");
+        }, 100);
       }
     }
   }, [editor, content]);
