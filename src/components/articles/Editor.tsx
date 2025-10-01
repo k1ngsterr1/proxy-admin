@@ -180,6 +180,7 @@ export default function ArticleEditor({
 
     console.log("🧹 CLEARING editor and processing structured content");
     console.log("Raw content before cleaning:", currentContent);
+    console.log("Available images array:", images);
 
     // ХАРДКОДНО ОЧИЩАЕМ ВСЕ ДУБЛИ ИЗОБРАЖЕНИЙ
     let cleanedContent = currentContent;
@@ -203,33 +204,26 @@ export default function ArticleEditor({
       /(<p data-image-id="[^"]*" data-image-url="[^"]*"><!--IMAGE_PLACEHOLDER_\d+--><\/p>)/
     );
 
-    console.log("� Content parts found:", parts.length, parts);
+    // Вставляем очищенный текстовый контент
+    if (cleanedContent.trim()) {
+      console.log("📝 INSERTING cleaned text content");
+      editor.commands.insertContent(cleanedContent);
+    }
 
-    parts.forEach((part, index) => {
-      if (part.includes("IMAGE_PLACEHOLDER_")) {
-        // Это маркер изображения - заменяем на реальное изображение
-        const imageUrlMatch = part.match(/data-image-url="([^"]*)"/);
-        const imageIdMatch = part.match(/data-image-id="([^"]*)"/);
+    // Добавляем изображения из массива images
+    if (images && images.length > 0) {
+      images.forEach((imageUrl, index) => {
+        console.log(`🖼️ INSERTING image ${index + 1}: ${imageUrl}`);
 
-        if (imageUrlMatch && imageIdMatch) {
-          const imageUrl = imageUrlMatch[1];
-          const imageId = imageIdMatch[1];
-
-          console.log(`🖼️ INSERTING image with ID ${imageId}: ${imageUrl}`);
-
-          // Вставляем изображение с сохранением ID для позиционирования
-          const imageHtml = `<p data-image-id="${imageId}"><img src="${imageUrl}" alt="Article image" style="max-width: 100%; height: auto;" /></p>`;
-          editor.commands.insertContent(imageHtml);
+        // Добавляем разрыв перед изображением если есть текстовый контент
+        if (cleanedContent.trim()) {
+          editor.commands.insertContent("<p></p>");
         }
-      } else if (part.trim()) {
-        // Это текстовый контент
-        console.log(
-          `📝 INSERTING text part ${index}:`,
-          part.substring(0, 50) + "..."
-        );
-        editor.commands.insertContent(part);
-      }
-    });
+
+        // Вставляем изображение используя setImage команду
+        editor.commands.setImage({ src: imageUrl });
+      });
+    }
 
     console.log("✅ Structured content processing COMPLETE");
   };
