@@ -81,43 +81,22 @@ export default function ArticleForm({
       setImages(article.images || []);
       setArticleLang(article.lang || "ru");
 
-      // Создаем контент с изображениями из массива images
-      let contentWithImages = article.content || "";
+      // Используем контент как есть из статьи - он уже содержит правильную структуру с изображениями
+      const originalContent = article.content || "";
 
-      // Если есть изображения в массиве images, добавляем их в контент
-      if (article.images && article.images.length > 0) {
-        console.log(
-          "Adding images from article.images to content:",
-          article.images
-        );
+      console.log("Loading article content as-is:", {
+        contentLength: originalContent.length,
+        contentPreview: originalContent.substring(0, 200) + "...",
+        imagesInContent: extractImagesFromContent(originalContent),
+        imagesInArray: article.images,
+      });
 
-        // Проверяем, есть ли уже эти изображения в контенте
-        const existingImageUrls = extractImagesFromContent(contentWithImages);
-
-        // Добавляем только те изображения, которых нет в контенте
-        const imagesToAdd = article.images.filter(
-          (imageUrl) => !existingImageUrls.includes(imageUrl)
-        );
-
-        if (imagesToAdd.length > 0) {
-          // Добавляем недостающие изображения в конец контента с пустыми параграфами для редактирования
-          const imageHtml = imagesToAdd
-            .map(
-              (imageUrl) =>
-                `<p></p><img src="${imageUrl}" alt="Article image" style="max-width: 100%; height: auto;" /><p></p>`
-            )
-            .join("");
-
-          contentWithImages = contentWithImages + imageHtml;
-          console.log("Added images to content:", imagesToAdd);
-        }
-      }
-
-      setContent(contentWithImages);
+      // Устанавливаем оригинальный контент без изменений
+      setContent(originalContent);
 
       console.log("Updated article data:", {
         title: article.title,
-        content: contentWithImages.substring(0, 100) + "...",
+        content: originalContent.substring(0, 100) + "...",
         lang: article.lang,
         images: article.images,
       });
@@ -174,110 +153,64 @@ export default function ArticleForm({
 
       console.log("Submitting article with language:", articleLang);
 
-      // Получаем изображения из редактора
+      // Оставляем контент как есть - со всеми изображениями в правильных местах
+      const finalContent = content;
+
+      // Извлекаем URL изображений из контента для массива images (но не удаляем их из контента)
       const tempDiv = document.createElement("div");
       tempDiv.innerHTML = content;
       const imgElements = tempDiv.querySelectorAll("img");
 
-      // Решение проблемы с дублированием изображений
-      // Создаем новый документ без изображений для отправки на сервер
-      const contentWithoutImages = document.createElement("div");
-      contentWithoutImages.innerHTML = content;
+      // Собираем уникальные URL изображений
+      const imageUrls = Array.from(imgElements)
+        .map((img) => img.src)
+        .filter((src, index, array) => array.indexOf(src) === index); // убираем дубликаты
 
-      // Собираем все изображения из контента
-      const allImages = contentWithoutImages.querySelectorAll("img");
-
-      // Удаляем дубликаты изображений
-      const uniqueImgSrcs = new Set<string>();
-      const uniqueImages: HTMLImageElement[] = [];
-
-      // Собираем уникальные изображения
-      Array.from(allImages).forEach((img) => {
-        if (!uniqueImgSrcs.has(img.src)) {
-          uniqueImgSrcs.add(img.src);
-          uniqueImages.push(img as HTMLImageElement);
-        }
+      console.log("Final content with images:", {
+        contentLength: finalContent.length,
+        imageUrls: imageUrls,
+        contentPreview: finalContent.substring(0, 200) + "...",
       });
 
-      // Удаляем все изображения из контента для отправки на сервер
-      Array.from(allImages).forEach((img) => {
-        const parent = img.parentElement;
-        if (parent) {
-          parent.removeChild(img);
-        }
-      });
+      // Ищем новые изображения (data URLs) для загрузки
+      let newImageFile: File | null = null;
 
-      // Контент без изображений для отправки на сервер
-      const contentWithoutImagesHtml = contentWithoutImages.innerHTML;
-      console.log(
-        "Content without images:",
-        contentWithoutImagesHtml.substring(0, 100) + "..."
-      );
-
-      // Получаем первое изображение с data URL или URL для загрузки
-      let imageFile: File | null = null;
-      let imageUrl: string | null = null;
-
-      // Проверяем все уникальные изображения
-      for (const img of uniqueImages) {
-        // Если это data URL, преобразуем его в File
-        if (img.src.startsWith("data:image")) {
+      // Проверяем есть ли новые изображения (data URLs) в контенте
+      for (const url of imageUrls) {
+        if (url.startsWith("data:image")) {
           try {
-            const res = await fetch(img.src);
+            const res = await fetch(url);
             const blob = await res.blob();
             const fileName = `image-${Date.now()}.${
               blob.type.split("/")[1] || "png"
             }`;
-            imageFile = new File([blob], fileName, { type: blob.type });
-            // Берем только первое изображение
-            break;
+            newImageFile = new File([blob], fileName, { type: blob.type });
+            console.log("Found new image to upload:", fileName);
+            break; // Берем только первое новое изображение
           } catch (err) {
             console.error("Error converting data URL to file:", err);
           }
         }
-        // Если это обычный URL (при редактировании), сохраняем его
-        else if (img.src.startsWith("http")) {
-          imageUrl = img.src;
-          // Не прерываем цикл, продолжаем искать data URL
-        }
       }
 
-      // Создаем данные статьи
+      // Создаем данные статьи - отправляем контент с изображениями как есть
       const articleData: CreateArticleDto | UpdateArticleDto = {
         title,
-        content: contentWithoutImagesHtml, // Отправляем контент без изображений
-        lang: articleLang, // Используем язык из состояния, который учитывает язык статьи при редактировании
+        content: finalContent, // Отправляем полный контент с изображениями в правильных местах
+        lang: articleLang,
       };
 
-      console.log("Article data with language:", articleData.lang);
+      console.log("Article data:", {
+        title: articleData.title,
+        contentLength: articleData.content?.length || 0,
+        lang: articleData.lang,
+        hasNewImage: !!newImageFile,
+      });
 
-      // Добавляем изображение из редактора (только одно)
-      if (imageFile) {
-        // Если нашли data URL, преобразованный в File
-        articleData.images = imageFile;
-        console.log("Sending new image file");
-      } else if (imageUrl && isEditing) {
-        try {
-          // При редактировании, если нет нового изображения, но есть существующее URL
-          console.log("Converting existing image URL to File:", imageUrl);
-          // Преобразуем существующий URL в File для отправки в том же формате, что и при создании
-          const imageFileName =
-            imageUrl.split("/").pop() || "existing-image.jpg";
-          const imageFileType = "image/jpeg"; // Предполагаем JPEG, но можно определить по расширению
-          const imageFileObj = await urlToFile(
-            imageUrl,
-            imageFileName,
-            imageFileType
-          );
-
-          // Добавляем преобразованный файл в данные статьи
-          articleData.images = imageFileObj;
-          console.log("Successfully converted URL to File for PATCH request");
-        } catch (err) {
-          console.error("Error converting image URL to File:", err);
-          // Если не удалось преобразовать, продолжаем без изображения
-          // API должен сохранить существующее изображение
-        }
+      // Добавляем новое изображение если есть
+      if (newImageFile) {
+        articleData.images = newImageFile;
+        console.log("Adding new image file to article data");
       }
 
       if (isEditing && article?.id) {
