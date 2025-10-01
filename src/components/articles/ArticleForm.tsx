@@ -100,11 +100,11 @@ export default function ArticleForm({
         );
 
         if (imagesToAdd.length > 0) {
-          // Добавляем недостающие изображения в конец контента
+          // Добавляем недостающие изображения в конец контента с пустыми параграфами для редактирования
           const imageHtml = imagesToAdd
             .map(
               (imageUrl) =>
-                `<p><img src="${imageUrl}" alt="Article image" style="max-width: 100%; height: auto;" /></p>`
+                `<p></p><img src="${imageUrl}" alt="Article image" style="max-width: 100%; height: auto;" /><p></p>`
             )
             .join("");
 

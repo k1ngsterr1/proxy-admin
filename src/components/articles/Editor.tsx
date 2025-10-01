@@ -78,8 +78,11 @@ export default function ArticleEditor({
         },
       }),
       Image.configure({
-        inline: true,
+        inline: false,
         allowBase64: true,
+        HTMLAttributes: {
+          class: "editor-image",
+        },
       }),
       Link.configure({
         openOnClick: true,
@@ -99,6 +102,10 @@ export default function ArticleEditor({
       onChange(editor.getHTML());
     },
     editorProps: {
+      attributes: {
+        class:
+          "prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none",
+      },
       handleDOMEvents: {
         keydown: (_, event) => {
           // Улучшение обработки удаления
@@ -106,6 +113,40 @@ export default function ArticleEditor({
             // Позволяем стандартной обработке продолжиться
             return false;
           }
+          return false;
+        },
+        click: (view, event) => {
+          // Улучшенное позиционирование курсора при клике
+          const target = event.target as HTMLElement;
+
+          // Если кликнули на изображение
+          if (target.tagName === "IMG") {
+            event.preventDefault();
+
+            try {
+              const pos = view.posAtDOM(target, 0);
+              const $pos = view.state.doc.resolve(pos);
+
+              // Пытаемся поставить курсор после изображения
+              const after = Math.min($pos.after(), view.state.doc.content.size);
+
+              if (after > 0 && after <= view.state.doc.content.size) {
+                // Импортируем TextSelection из prosemirror-state
+                const { TextSelection } = require("prosemirror-state");
+                const selection = TextSelection.near(
+                  view.state.doc.resolve(after)
+                );
+                const tr = view.state.tr.setSelection(selection);
+                view.dispatch(tr);
+              }
+            } catch (error) {
+              console.log("Error positioning cursor:", error);
+            }
+
+            return true;
+          }
+
+          // Для других элементов позволяем стандартную обработку
           return false;
         },
       },
@@ -126,6 +167,16 @@ export default function ArticleEditor({
         // Используем setTimeout чтобы избежать конфликтов с обновлением
         setTimeout(() => {
           editor.commands.setContent(content, false);
+
+          // Добавляем пустой параграф в конец если контент заканчивается изображением
+          setTimeout(() => {
+            const doc = editor.state.doc;
+            const lastNode = doc.lastChild;
+
+            if (lastNode && lastNode.type.name === "image") {
+              editor.commands.insertContentAt(doc.content.size, "<p></p>");
+            }
+          }, 100);
         }, 0);
       }
     }
@@ -558,6 +609,32 @@ export default function ArticleEditor({
           height: auto;
           margin: 1rem 0;
           border-radius: 0.25rem;
+          display: block;
+          cursor: pointer;
+        }
+
+        /* Добавляем отступы вокруг изображений для лучшего позиционирования курсора */
+        .tiptap-editor-wrapper .ProseMirror img + p,
+        .tiptap-editor-wrapper .ProseMirror p + img {
+          margin-top: 1rem;
+        }
+
+        /* Стилизация пустых параграфов для лучшего позиционирования */
+        .tiptap-editor-wrapper .ProseMirror p:empty {
+          min-height: 1.5em;
+          margin: 0.25rem 0;
+        }
+
+        /* Улучшенная стилизация для лучшего UX */
+        .tiptap-editor-wrapper .ProseMirror {
+          line-height: 1.6;
+          padding: 1rem;
+        }
+
+        /* Подсветка выделенных изображений */
+        .tiptap-editor-wrapper .ProseMirror img.ProseMirror-selectednode {
+          outline: 2px solid #3b82f6;
+          outline-offset: 2px;
         }
 
         /* Стилизация заголовков */
