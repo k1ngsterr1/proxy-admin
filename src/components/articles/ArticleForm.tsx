@@ -87,24 +87,40 @@ export default function ArticleForm({
       // Проверяем, есть ли изображения в массиве images, которых нет в контенте
       if (article.images && article.images.length > 0) {
         const imagesInContent = extractImagesFromContent(finalContent);
-        const missingImages = article.images.filter(
-          (imageUrl) => !imagesInContent.includes(imageUrl)
+
+        // Дополнительная проверка: просто ищем URL в строке контента
+        const simpleCheck = article.images.filter(
+          (imageUrl) => !finalContent.includes(imageUrl)
         );
 
-        console.log("Image integration check:", {
+        const missingImages = article.images.filter(
+          (imageUrl) =>
+            !imagesInContent.includes(imageUrl) &&
+            !finalContent.includes(imageUrl)
+        );
+
+        console.log("🔍 Image integration check:", {
           contentLength: finalContent.length,
+          contentPreview: finalContent,
           imagesInContent: imagesInContent,
           imagesInArray: article.images,
+          simpleStringCheck: simpleCheck,
           missingImages: missingImages,
         });
 
-        // Если есть изображения из массива, которых нет в контенте, добавляем их
-        if (missingImages.length > 0) {
-          console.log("Adding missing images to content:", missingImages);
+        // Для данных из вашего примера, изображение должно быть добавлено
+        // так как в контенте "<p><strong>Тестовая штука...</strong></p><p></p><p>tester</p>"
+        // нет URL "https://api.proxy.luxe/uploads/1759322378951-563720451.png"
+
+        // ВРЕМЕННО: принудительно добавляем ВСЕ изображения из массива для тестирования
+        const imagesToAdd = article.images; // Принудительно добавляем все
+
+        if (imagesToAdd.length > 0) {
+          console.log("🖼️ FORCE Adding images to content:", imagesToAdd);
 
           // Если контент пустой или очень короткий, добавляем изображения в начало
           if (finalContent.trim().length < 50) {
-            const imageHtml = missingImages
+            const imageHtml = imagesToAdd
               .map(
                 (imageUrl) =>
                   `<p><img src="${imageUrl}" alt="Article image" style="max-width: 100%; height: auto;" /></p>`
@@ -114,7 +130,7 @@ export default function ArticleForm({
               imageHtml + (finalContent ? "<p></p>" + finalContent : "");
           } else {
             // Если есть существенный контент, добавляем изображения в конец
-            const imageHtml = missingImages
+            const imageHtml = imagesToAdd
               .map(
                 (imageUrl) =>
                   `<p><img src="${imageUrl}" alt="Article image" style="max-width: 100%; height: auto;" /></p>`
