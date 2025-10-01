@@ -178,19 +178,42 @@ export default function ArticleEditor({
         // Принудительно обновляем содержимое редактора
         // Используем setTimeout чтобы избежать конфликтов с обновлением
         setTimeout(() => {
-          console.log("⚡ Calling editor.commands.setContent...");
-          editor.commands.setContent(content, false);
+          console.log(
+            "⚡ Trying alternative approach: clear + insertContent..."
+          );
 
-          // Проверяем, что получилось после setContent
+          // Очищаем редактор
+          editor.commands.clearContent();
+
+          // Добавляем контент через insertContent
+          editor.commands.insertContent(content);
+
+          // Проверяем, что получилось
           setTimeout(() => {
             const newContent = editor.getHTML();
             const newHasImages = newContent.includes("<img");
-            console.log("📋 After setContent:", {
+            console.log("📋 After clear + insertContent:", {
               newContentLength: newContent.length,
               newHasImages,
               newContent: newContent.substring(0, 200) + "...",
               fullNewContent: newContent,
             });
+
+            // Если все еще нет изображений, попробуем setContent
+            if (!newHasImages && content.includes("<img")) {
+              console.log(
+                "🔄 Still no images, trying setContent as fallback..."
+              );
+              editor.commands.setContent(content, false);
+
+              setTimeout(() => {
+                const finalContent = editor.getHTML();
+                console.log("📋 After setContent fallback:", {
+                  finalHasImages: finalContent.includes("<img"),
+                  finalContent: finalContent.substring(0, 200) + "...",
+                });
+              }, 50);
+            }
 
             const doc = editor.state.doc;
             const lastNode = doc.lastChild;
