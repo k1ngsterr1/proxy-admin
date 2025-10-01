@@ -41,6 +41,7 @@ export default function ArticleForm({
   );
   const [title, setTitle] = useState(article?.title || "");
   const [content, setContent] = useState(article?.content || "");
+  const [finalContent, setFinalContent] = useState(""); // структурированный контент с маркерами
   const [images, setImages] = useState<string[]>(article?.images || []);
   const [imageFile, setImageFile] = useState<File | null>(null);
 
@@ -81,69 +82,61 @@ export default function ArticleForm({
       setImages(article.images || []);
       setArticleLang(article.lang || "ru");
 
-      // Начинаем с оригинального контента
+      // ХАРДКОДНАЯ ОЧИСТКА: Удаляем ВСЕ изображения из контента
       let finalContent = article.content || "";
 
-      // Проверяем, есть ли изображения в массиве images, которых нет в контенте
+      console.log("🧹 HARD CLEANING: Removing all images from content");
+      console.log("Before cleaning:", finalContent);
+
+      // Удаляем все img теги из контента (любые варианты)
+      finalContent = finalContent.replace(/<img[^>]*>/gi, "");
+      // Удаляем пустые img теги
+      finalContent = finalContent.replace(/<img\s*\/?>/gi, "");
+      // Удаляем пустые параграфы после удаления изображений
+      finalContent = finalContent.replace(/<p>\s*<\/p>/gi, "");
+      // Убираем лишние пробелы
+      finalContent = finalContent.replace(/\s{2,}/g, " ").trim();
+
+      console.log("After cleaning:", finalContent);
+
+      // СОЗДАЕМ СТРУКТУРИРОВАННЫЙ КОНТЕНТ с маркерами для изображений
       if (article.images && article.images.length > 0) {
-        const imagesInContent = extractImagesFromContent(finalContent);
+        console.log("🏗️ Building structured content with image markers");
 
-        // Дополнительная проверка: просто ищем URL в строке контента
-        const simpleCheck = article.images.filter(
-          (imageUrl) => !finalContent.includes(imageUrl)
-        );
+        // Создаем уникальные маркеры для каждого изображения
+        const imageMarkers = article.images.map((imageUrl, index) => ({
+          id: `image-${Date.now()}-${index}`,
+          url: imageUrl,
+          marker: `<!--IMAGE_PLACEHOLDER_${index}-->`,
+        }));
 
-        const missingImages = article.images.filter(
-          (imageUrl) =>
-            !imagesInContent.includes(imageUrl) &&
-            !finalContent.includes(imageUrl)
-        );
+        console.log("� Image markers created:", imageMarkers);
 
-        console.log("🔍 Image integration check:", {
-          contentLength: finalContent.length,
-          contentPreview: finalContent,
-          imagesInContent: imagesInContent,
-          imagesInArray: article.images,
-          simpleStringCheck: simpleCheck,
-          missingImages: missingImages,
-        });
-
-        // Для данных из вашего примера, изображение должно быть добавлено
-        // так как в контенте "<p><strong>Тестовая штука...</strong></p><p></p><p>tester</p>"
-        // нет URL "https://api.proxy.luxe/uploads/1759322378951-563720451.png"
-
-        // ВРЕМЕННО: принудительно добавляем ВСЕ изображения из массива для тестирования
-        const imagesToAdd = article.images; // Принудительно добавляем все
-
-        if (imagesToAdd.length > 0) {
-          console.log("🖼️ FORCE Adding images to content:", imagesToAdd);
-
-          // Если контент пустой или очень короткий, добавляем изображения в начало
-          if (finalContent.trim().length < 50) {
-            const imageHtml = imagesToAdd
-              .map(
-                (imageUrl) =>
-                  `<p><img src="${imageUrl}" alt="Article image" style="max-width: 100%; height: auto;" /></p>`
-              )
-              .join("");
-            finalContent =
-              imageHtml + (finalContent ? "<p></p>" + finalContent : "");
-          } else {
-            // Если есть существенный контент, добавляем изображения в конец
-            const imageHtml = imagesToAdd
-              .map(
-                (imageUrl) =>
-                  `<p><img src="${imageUrl}" alt="Article image" style="max-width: 100%; height: auto;" /></p>`
-              )
-              .join("");
-            finalContent = finalContent + "<p></p>" + imageHtml;
-          }
-
-          console.log("Content after adding images:", {
-            newContentLength: finalContent.length,
-            preview: finalContent.substring(0, 300) + "...",
-          });
+        // Если контент короткий, добавляем изображения в начало
+        if (finalContent.trim().length < 50) {
+          const imageMarkersHtml = imageMarkers
+            .map(
+              (img) =>
+                `<p data-image-id="${img.id}" data-image-url="${img.url}">${img.marker}</p>`
+            )
+            .join("");
+          finalContent =
+            imageMarkersHtml + (finalContent ? "<p></p>" + finalContent : "");
+        } else {
+          // Добавляем изображения в конец
+          const imageMarkersHtml = imageMarkers
+            .map(
+              (img) =>
+                `<p data-image-id="${img.id}" data-image-url="${img.url}">${img.marker}</p>`
+            )
+            .join("");
+          finalContent = finalContent + "<p></p>" + imageMarkersHtml;
         }
+
+        console.log("📝 Final structured content:", finalContent);
+
+        // Устанавливаем finalContent в state чтобы он был доступен в Editor
+        setFinalContent(finalContent);
       }
 
       // Устанавливаем финальный контент
@@ -324,7 +317,12 @@ export default function ArticleForm({
           </div>
           <div className="space-y-2">
             <Label htmlFor="content">Содержание</Label>
-            <ArticleEditor content={content} onChange={setContent} />
+            <ArticleEditor
+              content={finalContent || content}
+              value={finalContent || content}
+              images={images}
+              onChange={setContent}
+            />
           </div>
         </CardContent>
         <CardFooter className="flex justify-between">

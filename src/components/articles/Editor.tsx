@@ -43,12 +43,18 @@ import "./editor.css";
 interface ArticleEditorProps {
   content: string;
   onChange: (content: string) => void;
+  value?: string; // для обратной совместимости
+  images?: string[]; // массив URL изображений
 }
 
 export default function ArticleEditor({
   content,
   onChange,
+  value,
+  images = [],
 }: ArticleEditorProps) {
+  // Используем value если он есть, иначе content
+  const currentContent = value || content;
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -97,7 +103,7 @@ export default function ArticleEditor({
       TextStyle,
       Color,
     ],
-    content: content,
+    content: currentContent,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
     },
@@ -153,84 +159,65 @@ export default function ArticleEditor({
     },
   });
 
-  // При изменении содержимого обновляем редактор
+  // Обработка структурированного контента с маркерами изображений
   useEffect(() => {
-    if (editor && content !== undefined) {
-      // Проверяем, отличается ли текущее содержимое от нового
-      const currentContent = editor.getHTML();
-      if (currentContent !== content) {
-        console.log(
-          "Editor content updated, setting content:",
-          content.substring(0, 100) + "..."
-        );
+    if (!editor) return;
 
-        // Детальная проверка содержимого
-        const hasImages = content.includes("<img");
-        const imageMatches = content.match(/<img[^>]*>/g);
-        console.log("🔍 Content analysis:", {
-          contentLength: content.length,
-          hasImages,
-          imageCount: imageMatches ? imageMatches.length : 0,
-          imageMatches,
-          fullContent: content,
-        });
+    console.log("🔄 Processing structured content with image markers");
+    console.log("Current content:", currentContent);
 
-        // НОВЫЙ ПОДХОД: Программное создание контента с изображениями
-        setTimeout(() => {
-          console.log("🎯 NEW APPROACH: Programmatic content building...");
-          console.log("🔍 Raw content received:", content);
-
-          // Очищаем редактор
-          editor.commands.clearContent();
-
-          // Парсим контент и обрабатываем изображения программно
-          const tempDiv = document.createElement("div");
-          tempDiv.innerHTML = content;
-
-          console.log("🔧 TempDiv innerHTML:", tempDiv.innerHTML);
-
-          // Находим все изображения
-          const images = tempDiv.querySelectorAll("img");
-          console.log("🔍 Found images:", images.length, images);
-
-          const imageData = Array.from(images).map((img) => ({
-            src: img.getAttribute("src") || "",
-            alt: img.getAttribute("alt") || "Article image",
-          }));
-
-          console.log("📋 Image data extracted:", imageData);
-
-          // Удаляем изображения из HTML для текстовой части
-          images.forEach((img) => img.remove());
-
-          // Получаем чистый текстовый контент
-          const textContent = tempDiv.innerHTML;
-
-          console.log("📝 Processing content:", {
-            textContent: textContent.substring(0, 100),
-            imageCount: imageData.length,
-            images: imageData,
-          });
-
-          // Сначала вставляем текстовый контент
-          if (textContent.trim()) {
-            editor.commands.insertContent(textContent);
-          }
-
-          // Затем добавляем изображения в конец
-          imageData.forEach((imgData, index) => {
-            console.log(`📸 Adding image ${index + 1}:`, imgData.src);
-
-            // Используем только рабочий метод - прямая вставка HTML
-            const imageHtml = `<p></p><img src="${imgData.src}" alt="${imgData.alt}" style="max-width: 100%; height: auto;" /><p></p>`;
-
-            editor.commands.insertContent(imageHtml);
-          });
-          console.log("✅ Content setup complete");
-        }, 100);
-      }
+    if (currentContent && currentContent.includes("IMAGE_PLACEHOLDER_")) {
+      processStructuredContent();
+    } else if (currentContent !== editor.getHTML()) {
+      // Обычное обновление контента если нет маркеров
+      console.log("📝 Simple content update");
+      editor.commands.setContent(currentContent || "");
     }
-  }, [editor, content]);
+  }, [currentContent, editor]);
+
+  const processStructuredContent = () => {
+    if (!editor || !currentContent) return;
+
+    console.log("🧹 CLEARING editor and processing structured content");
+
+    // Очищаем редактор полностью
+    editor.commands.clearContent();
+
+    // Разбираем контент по частям
+    const parts = currentContent.split(
+      /(<p data-image-id="[^"]*" data-image-url="[^"]*"><!--IMAGE_PLACEHOLDER_\d+--><\/p>)/
+    );
+
+    console.log("� Content parts found:", parts.length, parts);
+
+    parts.forEach((part, index) => {
+      if (part.includes("IMAGE_PLACEHOLDER_")) {
+        // Это маркер изображения - заменяем на реальное изображение
+        const imageUrlMatch = part.match(/data-image-url="([^"]*)"/);
+        const imageIdMatch = part.match(/data-image-id="([^"]*)"/);
+
+        if (imageUrlMatch && imageIdMatch) {
+          const imageUrl = imageUrlMatch[1];
+          const imageId = imageIdMatch[1];
+
+          console.log(`🖼️ INSERTING image with ID ${imageId}: ${imageUrl}`);
+
+          // Вставляем изображение с сохранением ID для позиционирования
+          const imageHtml = `<p data-image-id="${imageId}"><img src="${imageUrl}" alt="Article image" style="max-width: 100%; height: auto;" /></p>`;
+          editor.commands.insertContent(imageHtml);
+        }
+      } else if (part.trim()) {
+        // Это текстовый контент
+        console.log(
+          `📝 INSERTING text part ${index}:`,
+          part.substring(0, 50) + "..."
+        );
+        editor.commands.insertContent(part);
+      }
+    });
+
+    console.log("✅ Structured content processing COMPLETE");
+  };
 
   // Обработчик выбора изображения
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
