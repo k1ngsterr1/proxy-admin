@@ -179,12 +179,27 @@ export default function ArticleEditor({
     if (!editor || !currentContent) return;
 
     console.log("🧹 CLEARING editor and processing structured content");
+    console.log("Raw content before cleaning:", currentContent);
+
+    // ХАРДКОДНО ОЧИЩАЕМ ВСЕ ДУБЛИ ИЗОБРАЖЕНИЙ
+    let cleanedContent = currentContent;
+
+    // Удаляем все теги img из контента (они дублируются)
+    cleanedContent = cleanedContent.replace(/<img[^>]*>/gi, "");
+
+    // Удаляем пустые параграфы после удаления изображений
+    cleanedContent = cleanedContent.replace(/<p[^>]*>\s*<\/p>/gi, "");
+
+    // Удаляем множественные br теги
+    cleanedContent = cleanedContent.replace(/(<br\s*\/?>){2,}/gi, "<br>");
+
+    console.log("🧽 Content after cleaning:", cleanedContent);
 
     // Очищаем редактор полностью
     editor.commands.clearContent();
 
-    // Разбираем контент по частям
-    const parts = currentContent.split(
+    // Разбираем очищенный контент по частям
+    const parts = cleanedContent.split(
       /(<p data-image-id="[^"]*" data-image-url="[^"]*"><!--IMAGE_PLACEHOLDER_\d+--><\/p>)/
     );
 
