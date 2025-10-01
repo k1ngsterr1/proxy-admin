@@ -258,6 +258,7 @@ export default function ArticleEditor({
     <div className="border border-border rounded-md overflow-hidden">
       <div className="bg-secondary p-2 flex flex-wrap gap-1 border-b border-border">
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           onClick={toggleBold}
@@ -267,6 +268,7 @@ export default function ArticleEditor({
           <Bold size={16} />
         </Button>
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           onClick={toggleItalic}
@@ -276,6 +278,7 @@ export default function ArticleEditor({
           <Italic size={16} />
         </Button>
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           onClick={toggleHeading1}
@@ -287,6 +290,7 @@ export default function ArticleEditor({
           <Heading1 size={16} />
         </Button>
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           onClick={toggleHeading2}
@@ -298,6 +302,7 @@ export default function ArticleEditor({
           <Heading2 size={16} />
         </Button>
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           onClick={toggleBulletList}
@@ -307,6 +312,7 @@ export default function ArticleEditor({
           <List size={16} />
         </Button>
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           onClick={toggleOrderedList}
@@ -316,6 +322,7 @@ export default function ArticleEditor({
           <ListOrdered size={16} />
         </Button>
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           onClick={toggleBlockquote}
@@ -325,6 +332,7 @@ export default function ArticleEditor({
           <TextQuote size={16} />
         </Button>
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           onClick={toggleCodeBlock}
@@ -334,6 +342,7 @@ export default function ArticleEditor({
           <Code size={16} />
         </Button>
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           onClick={setHardBreak}
@@ -345,7 +354,12 @@ export default function ArticleEditor({
         {/* Кнопка для добавления изображения */}
         <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
           <DialogTrigger asChild>
-            <Button variant="ghost" size="sm" title="Добавить изображение">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              title="Добавить изображение"
+            >
               <FileImage size={16} />
             </Button>
           </DialogTrigger>
@@ -371,6 +385,7 @@ export default function ArticleEditor({
                 </div>
               )}
               <Button
+                type="button"
                 onClick={insertImage}
                 disabled={!imagePreview || isUploading}
                 className="image-upload-button"
@@ -385,6 +400,7 @@ export default function ArticleEditor({
         <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
           <DialogTrigger asChild>
             <Button
+              type="button"
               variant="ghost"
               size="sm"
               title="Добавить ссылку"
@@ -420,6 +436,7 @@ export default function ArticleEditor({
               </div>
               <div className="flex gap-2">
                 <Button
+                  type="button"
                   onClick={insertLink}
                   disabled={!linkUrl}
                   className="flex-1"
@@ -428,6 +445,7 @@ export default function ArticleEditor({
                 </Button>
                 {editor?.isActive("link") && (
                   <Button
+                    type="button"
                     variant="destructive"
                     onClick={() => {
                       unsetLink();
@@ -442,10 +460,22 @@ export default function ArticleEditor({
           </DialogContent>
         </Dialog>
 
-        <Button variant="ghost" size="sm" onClick={undo} title="Отменить">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={undo}
+          title="Отменить"
+        >
           <Undo size={16} />
         </Button>
-        <Button variant="ghost" size="sm" onClick={redo} title="Повторить">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={redo}
+          title="Повторить"
+        >
           <Redo size={16} />
         </Button>
       </div>
@@ -455,13 +485,24 @@ export default function ArticleEditor({
         {editor && (
           <BubbleMenu editor={editor} tippyOptions={{ duration: 100 }}>
             <div className="flex bg-white border rounded-md shadow-sm">
-              <Button variant="ghost" size="sm" onClick={toggleBold}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={toggleBold}
+              >
                 <Bold size={14} />
               </Button>
-              <Button variant="ghost" size="sm" onClick={toggleItalic}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={toggleItalic}
+              >
                 <Italic size={14} />
               </Button>
               <Button
+                type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => setLinkDialogOpen(true)}
