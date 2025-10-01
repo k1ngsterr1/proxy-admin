@@ -147,7 +147,20 @@ export default function ArticleForm({
       }
 
       // Устанавливаем финальный контент
+      console.log("🚀 Setting final content:", {
+        originalLength: (article.content || "").length,
+        finalLength: finalContent.length,
+        originalContent: article.content,
+        finalContent: finalContent,
+      });
+
       setContent(finalContent);
+
+      // Принудительно обновляем контент через небольшую задержку
+      setTimeout(() => {
+        console.log("⏰ Force updating content after delay");
+        setContent(finalContent);
+      }, 100);
 
       console.log("Updated article data:", {
         title: article.title,
