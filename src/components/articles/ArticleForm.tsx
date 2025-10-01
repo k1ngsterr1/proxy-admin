@@ -1,187 +1,210 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useRef } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import ArticleEditor from "./Editor"
-import { articlesApi, Article, CreateArticleDto, UpdateArticleDto } from "@/lib/api/articles"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import ArticleEditor from "./Editor";
+import {
+  articlesApi,
+  Article,
+  CreateArticleDto,
+  UpdateArticleDto,
+} from "@/lib/api/articles";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface ArticleFormProps {
-  article?: Article
-  isEditing?: boolean
-  lang?: 'ru' | 'en'
+  article?: Article;
+  isEditing?: boolean;
+  lang?: "ru" | "en";
 }
 
-export default function ArticleForm({ article, isEditing = false, lang = 'ru' }: ArticleFormProps) {
-  const router = useRouter()
-  const queryClient = useQueryClient()
-  
+export default function ArticleForm({
+  article,
+  isEditing = false,
+  lang = "ru",
+}: ArticleFormProps) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+
   // Если редактируем статью, берем язык из статьи, иначе используем пропс lang
-  const [articleLang, setArticleLang] = useState<'ru' | 'en'>(article?.lang || lang)
-  const [title, setTitle] = useState(article?.title || "")
-  const [content, setContent] = useState(article?.content || "")
-  const [images, setImages] = useState<string[]>(article?.images || [])
-  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [articleLang, setArticleLang] = useState<"ru" | "en">(
+    article?.lang || lang
+  );
+  const [title, setTitle] = useState(article?.title || "");
+  const [content, setContent] = useState(article?.content || "");
+  const [images, setImages] = useState<string[]>(article?.images || []);
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
   // This function is now just for display purposes
   const extractImagesFromContent = (htmlContent: string): string[] => {
-    const tempDiv = document.createElement('div')
-    tempDiv.innerHTML = htmlContent
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = htmlContent;
 
-    const imgElements = tempDiv.querySelectorAll('img')
+    const imgElements = tempDiv.querySelectorAll("img");
 
     // Extract image URLs and filter out data URLs
     const imageUrls = Array.from(imgElements)
-      .map(img => img.src)
-      .filter(src => !src.startsWith('data:')) // Only keep actual URLs, not data URLs
+      .map((img) => img.src)
+      .filter((src) => !src.startsWith("data:")); // Only keep actual URLs, not data URLs
 
-    console.log('Extracted image URLs:', imageUrls)
-    return imageUrls
-  }
+    console.log("Extracted image URLs:", imageUrls);
+    return imageUrls;
+  };
 
   // Функция для преобразования URL в File
-  const urlToFile = async (url: string, filename: string, mimeType: string): Promise<File> => {
-    const response = await fetch(url)
-    const blob = await response.blob()
-    return new File([blob], filename, { type: mimeType })
-  }
+  const urlToFile = async (
+    url: string,
+    filename: string,
+    mimeType: string
+  ): Promise<File> => {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new File([blob], filename, { type: mimeType });
+  };
 
-  // При инициализации компонента для редактирования, добавляем существующие изображения в контент
+  // Обновляем данные при изменении статьи
   useEffect(() => {
-    // Если редактируем статью, обновляем язык из статьи
-    if (isEditing && article?.lang) {
-      console.log('Setting language from article:', article.lang)
-      setArticleLang(article.lang)
+    if (article) {
+      console.log("Article data updated:", article);
+
+      // Обновляем все поля из новых данных статьи
+      setTitle(article.title || "");
+      setContent(article.content || "");
+      setImages(article.images || []);
+      setArticleLang(article.lang || "ru");
+
+      console.log("Updated article data:", {
+        title: article.title,
+        content: article.content?.substring(0, 100) + "...",
+        lang: article.lang,
+        images: article.images,
+      });
+    } else if (!isEditing) {
+      // Сбрасываем поля для новой статьи
+      setTitle("");
+      setContent("");
+      setImages([]);
+      setArticleLang(lang);
     }
-    
-    // Только при первой загрузке для редактирования
-    if (isEditing && article?.images && article.images.length > 0) {
-      console.log('Article has images:', article.images)
-
-      // Создаем новый HTML с изображениями
-      // Добавляем изображения в начало контента, чтобы они были видны
-      let imageHtml = '';
-      article.images.forEach(imageUrl => {
-        if (typeof imageUrl === 'string') {
-          console.log('Adding image to content:', imageUrl)
-          imageHtml += `<div><img src="${imageUrl}" alt="Article image" /></div>`
-        }
-      })
-
-      // Создаем новый контент с изображениями в начале
-      const newContent = imageHtml + content
-
-      // Обновляем контент в редакторе
-      console.log('Setting new content with images at the beginning')
-      setContent(newContent)
-    }
-
-    // Извлекаем URL изображений из контента для отслеживания
-    const extractedImages = extractImagesFromContent(content)
-    setImages(extractedImages)
-  }, [isEditing, article])
+  }, [article, isEditing, lang]);
 
   const createMutation = useMutation({
-    mutationFn: (article: CreateArticleDto) =>
-      articlesApi.create(article), // без language
+    mutationFn: (article: CreateArticleDto) => articlesApi.create(article), // без language
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['articles'] })
-      router.push("/admin/articles")
-    }
-  })
+      queryClient.invalidateQueries({ queryKey: ["articles"] });
+      router.push("/admin/articles");
+    },
+  });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateArticleDto }) =>
       articlesApi.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['articles'] })
-      router.push("/admin/articles")
-    }
-  })
+    onSuccess: (updatedArticle, variables) => {
+      // Инвалидируем список статей
+      queryClient.invalidateQueries({ queryKey: ["articles"] });
+      // Инвалидируем конкретную статью
+      queryClient.invalidateQueries({ queryKey: ["article", variables.id] });
+      // Также можно обновить кеш напрямую
+      queryClient.setQueryData(["article", variables.id], updatedArticle);
+      router.push("/admin/articles");
+    },
+  });
 
   // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setImageFile(e.target.files[0])
+      setImageFile(e.target.files[0]);
     }
-  }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     try {
       // Show loading state
-      const submitButton = document.querySelector('.submit-button') as HTMLButtonElement
+      const submitButton = document.querySelector(
+        ".submit-button"
+      ) as HTMLButtonElement;
       if (submitButton) {
-        submitButton.disabled = true
-        submitButton.textContent = 'Сохранение...'
+        submitButton.disabled = true;
+        submitButton.textContent = "Сохранение...";
       }
-      
-      console.log('Submitting article with language:', articleLang)
+
+      console.log("Submitting article with language:", articleLang);
 
       // Получаем изображения из редактора
-      const tempDiv = document.createElement('div')
-      tempDiv.innerHTML = content
-      const imgElements = tempDiv.querySelectorAll('img')
+      const tempDiv = document.createElement("div");
+      tempDiv.innerHTML = content;
+      const imgElements = tempDiv.querySelectorAll("img");
 
       // Решение проблемы с дублированием изображений
       // Создаем новый документ без изображений для отправки на сервер
-      const contentWithoutImages = document.createElement('div')
-      contentWithoutImages.innerHTML = content
-      
+      const contentWithoutImages = document.createElement("div");
+      contentWithoutImages.innerHTML = content;
+
       // Собираем все изображения из контента
-      const allImages = contentWithoutImages.querySelectorAll('img')
-      
+      const allImages = contentWithoutImages.querySelectorAll("img");
+
       // Удаляем дубликаты изображений
-      const uniqueImgSrcs = new Set<string>()
-      const uniqueImages: HTMLImageElement[] = []
-      
+      const uniqueImgSrcs = new Set<string>();
+      const uniqueImages: HTMLImageElement[] = [];
+
       // Собираем уникальные изображения
-      Array.from(allImages).forEach(img => {
+      Array.from(allImages).forEach((img) => {
         if (!uniqueImgSrcs.has(img.src)) {
-          uniqueImgSrcs.add(img.src)
-          uniqueImages.push(img as HTMLImageElement)
+          uniqueImgSrcs.add(img.src);
+          uniqueImages.push(img as HTMLImageElement);
         }
-      })
-      
+      });
+
       // Удаляем все изображения из контента для отправки на сервер
-      Array.from(allImages).forEach(img => {
-        const parent = img.parentElement
+      Array.from(allImages).forEach((img) => {
+        const parent = img.parentElement;
         if (parent) {
-          parent.removeChild(img)
+          parent.removeChild(img);
         }
-      })
-      
+      });
+
       // Контент без изображений для отправки на сервер
-      const contentWithoutImagesHtml = contentWithoutImages.innerHTML
-      console.log('Content without images:', contentWithoutImagesHtml.substring(0, 100) + '...')
-      
+      const contentWithoutImagesHtml = contentWithoutImages.innerHTML;
+      console.log(
+        "Content without images:",
+        contentWithoutImagesHtml.substring(0, 100) + "..."
+      );
+
       // Получаем первое изображение с data URL или URL для загрузки
-      let imageFile: File | null = null
-      let imageUrl: string | null = null
-      
+      let imageFile: File | null = null;
+      let imageUrl: string | null = null;
+
       // Проверяем все уникальные изображения
-      for (const img of uniqueImages) {        
+      for (const img of uniqueImages) {
         // Если это data URL, преобразуем его в File
-        if (img.src.startsWith('data:image')) {
+        if (img.src.startsWith("data:image")) {
           try {
-            const res = await fetch(img.src)
-            const blob = await res.blob()
-            const fileName = `image-${Date.now()}.${blob.type.split('/')[1] || 'png'}`
-            imageFile = new File([blob], fileName, { type: blob.type })
+            const res = await fetch(img.src);
+            const blob = await res.blob();
+            const fileName = `image-${Date.now()}.${
+              blob.type.split("/")[1] || "png"
+            }`;
+            imageFile = new File([blob], fileName, { type: blob.type });
             // Берем только первое изображение
-            break
+            break;
           } catch (err) {
-            console.error('Error converting data URL to file:', err)
+            console.error("Error converting data URL to file:", err);
           }
         }
         // Если это обычный URL (при редактировании), сохраняем его
-        else if (img.src.startsWith('http')) {
-          imageUrl = img.src
+        else if (img.src.startsWith("http")) {
+          imageUrl = img.src;
           // Не прерываем цикл, продолжаем искать data URL
         }
       }
@@ -190,30 +213,35 @@ export default function ArticleForm({ article, isEditing = false, lang = 'ru' }:
       const articleData: CreateArticleDto | UpdateArticleDto = {
         title,
         content: contentWithoutImagesHtml, // Отправляем контент без изображений
-        lang: articleLang // Используем язык из состояния, который учитывает язык статьи при редактировании
-      }
-      
-      console.log('Article data with language:', articleData.lang)
+        lang: articleLang, // Используем язык из состояния, который учитывает язык статьи при редактировании
+      };
+
+      console.log("Article data with language:", articleData.lang);
 
       // Добавляем изображение из редактора (только одно)
       if (imageFile) {
         // Если нашли data URL, преобразованный в File
-        articleData.images = imageFile
-        console.log('Sending new image file')
+        articleData.images = imageFile;
+        console.log("Sending new image file");
       } else if (imageUrl && isEditing) {
         try {
           // При редактировании, если нет нового изображения, но есть существующее URL
-          console.log('Converting existing image URL to File:', imageUrl)
+          console.log("Converting existing image URL to File:", imageUrl);
           // Преобразуем существующий URL в File для отправки в том же формате, что и при создании
-          const imageFileName = imageUrl.split('/').pop() || 'existing-image.jpg'
-          const imageFileType = 'image/jpeg' // Предполагаем JPEG, но можно определить по расширению
-          const imageFileObj = await urlToFile(imageUrl, imageFileName, imageFileType)
+          const imageFileName =
+            imageUrl.split("/").pop() || "existing-image.jpg";
+          const imageFileType = "image/jpeg"; // Предполагаем JPEG, но можно определить по расширению
+          const imageFileObj = await urlToFile(
+            imageUrl,
+            imageFileName,
+            imageFileType
+          );
 
           // Добавляем преобразованный файл в данные статьи
-          articleData.images = imageFileObj
-          console.log('Successfully converted URL to File for PATCH request')
+          articleData.images = imageFileObj;
+          console.log("Successfully converted URL to File for PATCH request");
         } catch (err) {
-          console.error('Error converting image URL to File:', err)
+          console.error("Error converting image URL to File:", err);
           // Если не удалось преобразовать, продолжаем без изображения
           // API должен сохранить существующее изображение
         }
@@ -222,28 +250,32 @@ export default function ArticleForm({ article, isEditing = false, lang = 'ru' }:
       if (isEditing && article?.id) {
         updateMutation.mutate({
           id: article.id,
-          data: articleData
-        })
+          data: articleData,
+        });
       } else {
-        createMutation.mutate(articleData as CreateArticleDto)
+        createMutation.mutate(articleData as CreateArticleDto);
       }
     } catch (error) {
-      console.error('Error submitting article:', error)
+      console.error("Error submitting article:", error);
     } finally {
       // Reset button state
-      const submitButton = document.querySelector('.submit-button') as HTMLButtonElement
+      const submitButton = document.querySelector(
+        ".submit-button"
+      ) as HTMLButtonElement;
       if (submitButton) {
-        submitButton.disabled = false
-        submitButton.textContent = 'Сохранить'
+        submitButton.disabled = false;
+        submitButton.textContent = "Сохранить";
       }
     }
-  }
+  };
 
   return (
     <form onSubmit={handleSubmit}>
       <Card>
         <CardHeader>
-          <CardTitle>{isEditing ? "Редактировать статью" : "Новая статья"}</CardTitle>
+          <CardTitle>
+            {isEditing ? "Редактировать статью" : "Новая статья"}
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
@@ -276,10 +308,12 @@ export default function ArticleForm({ article, isEditing = false, lang = 'ru' }:
           >
             {createMutation.isPending || updateMutation.isPending
               ? "Сохранение..."
-              : isEditing ? "Обновить" : "Создать"}
+              : isEditing
+              ? "Обновить"
+              : "Создать"}
           </Button>
         </CardFooter>
       </Card>
     </form>
-  )
+  );
 }

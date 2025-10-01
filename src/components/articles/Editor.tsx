@@ -114,7 +114,7 @@ export default function ArticleEditor({
 
   // При изменении содержимого обновляем редактор
   useEffect(() => {
-    if (editor && content) {
+    if (editor && content !== undefined) {
       // Проверяем, отличается ли текущее содержимое от нового
       const currentContent = editor.getHTML();
       if (currentContent !== content) {
@@ -123,7 +123,10 @@ export default function ArticleEditor({
           content.substring(0, 100) + "..."
         );
         // Принудительно обновляем содержимое редактора
-        editor.commands.setContent(content);
+        // Используем setTimeout чтобы избежать конфликтов с обновлением
+        setTimeout(() => {
+          editor.commands.setContent(content, false);
+        }, 0);
       }
     }
   }, [editor, content]);
