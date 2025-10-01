@@ -178,6 +178,7 @@ export default function ArticleEditor({
         // НОВЫЙ ПОДХОД: Программное создание контента с изображениями
         setTimeout(() => {
           console.log("🎯 NEW APPROACH: Programmatic content building...");
+          console.log("🔍 Raw content received:", content);
 
           // Очищаем редактор
           editor.commands.clearContent();
@@ -186,12 +187,18 @@ export default function ArticleEditor({
           const tempDiv = document.createElement("div");
           tempDiv.innerHTML = content;
 
+          console.log("🔧 TempDiv innerHTML:", tempDiv.innerHTML);
+
           // Находим все изображения
           const images = tempDiv.querySelectorAll("img");
+          console.log("🔍 Found images:", images.length, images);
+
           const imageData = Array.from(images).map((img) => ({
             src: img.getAttribute("src") || "",
             alt: img.getAttribute("alt") || "Article image",
           }));
+
+          console.log("📋 Image data extracted:", imageData);
 
           // Удаляем изображения из HTML для текстовой части
           images.forEach((img) => img.remove());
