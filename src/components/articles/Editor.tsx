@@ -220,27 +220,12 @@ export default function ArticleEditor({
           // Затем добавляем изображения в конец
           imageData.forEach((imgData, index) => {
             console.log(`📸 Adding image ${index + 1}:`, imgData.src);
-            console.log(`🔧 Trying FORCE HTML insert for image:`, imgData);
 
-            // МЕТОД ГРУБОЙ СИЛЫ: Вставляем HTML напрямую
+            // Используем только рабочий метод - прямая вставка HTML
             const imageHtml = `<p></p><img src="${imgData.src}" alt="${imgData.alt}" style="max-width: 100%; height: auto;" /><p></p>`;
 
-            console.log(`💥 Forcing HTML:`, imageHtml);
             editor.commands.insertContent(imageHtml);
-
-            // Дополнительная попытка через setImage
-            console.log(`🔄 Also trying setImage as backup...`);
-            try {
-              editor.commands.setImage({
-                src: imgData.src,
-                alt: imgData.alt,
-              });
-              console.log(`✅ setImage succeeded`);
-            } catch (error) {
-              console.error(`❌ setImage failed:`, error);
-            }
           });
-
           console.log("✅ Content setup complete");
         }, 100);
       }
