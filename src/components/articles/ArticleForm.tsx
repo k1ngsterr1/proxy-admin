@@ -81,22 +81,61 @@ export default function ArticleForm({
       setImages(article.images || []);
       setArticleLang(article.lang || "ru");
 
-      // Используем контент как есть из статьи - он уже содержит правильную структуру с изображениями
-      const originalContent = article.content || "";
+      // Начинаем с оригинального контента
+      let finalContent = article.content || "";
 
-      console.log("Loading article content as-is:", {
-        contentLength: originalContent.length,
-        contentPreview: originalContent.substring(0, 200) + "...",
-        imagesInContent: extractImagesFromContent(originalContent),
-        imagesInArray: article.images,
-      });
+      // Проверяем, есть ли изображения в массиве images, которых нет в контенте
+      if (article.images && article.images.length > 0) {
+        const imagesInContent = extractImagesFromContent(finalContent);
+        const missingImages = article.images.filter(
+          (imageUrl) => !imagesInContent.includes(imageUrl)
+        );
 
-      // Устанавливаем оригинальный контент без изменений
-      setContent(originalContent);
+        console.log("Image integration check:", {
+          contentLength: finalContent.length,
+          imagesInContent: imagesInContent,
+          imagesInArray: article.images,
+          missingImages: missingImages,
+        });
+
+        // Если есть изображения из массива, которых нет в контенте, добавляем их
+        if (missingImages.length > 0) {
+          console.log("Adding missing images to content:", missingImages);
+
+          // Если контент пустой или очень короткий, добавляем изображения в начало
+          if (finalContent.trim().length < 50) {
+            const imageHtml = missingImages
+              .map(
+                (imageUrl) =>
+                  `<p><img src="${imageUrl}" alt="Article image" style="max-width: 100%; height: auto;" /></p>`
+              )
+              .join("");
+            finalContent =
+              imageHtml + (finalContent ? "<p></p>" + finalContent : "");
+          } else {
+            // Если есть существенный контент, добавляем изображения в конец
+            const imageHtml = missingImages
+              .map(
+                (imageUrl) =>
+                  `<p><img src="${imageUrl}" alt="Article image" style="max-width: 100%; height: auto;" /></p>`
+              )
+              .join("");
+            finalContent = finalContent + "<p></p>" + imageHtml;
+          }
+
+          console.log("Content after adding images:", {
+            newContentLength: finalContent.length,
+            preview: finalContent.substring(0, 300) + "...",
+          });
+        }
+      }
+
+      // Устанавливаем финальный контент
+      setContent(finalContent);
 
       console.log("Updated article data:", {
         title: article.title,
-        content: originalContent.substring(0, 100) + "...",
+        content: finalContent.substring(0, 100) + "...",
         lang: article.lang,
         images: article.images,
       });
