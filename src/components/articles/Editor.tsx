@@ -163,20 +163,42 @@ export default function ArticleEditor({
           "Editor content updated, setting content:",
           content.substring(0, 100) + "..."
         );
+
+        // Детальная проверка содержимого
+        const hasImages = content.includes("<img");
+        const imageMatches = content.match(/<img[^>]*>/g);
+        console.log("🔍 Content analysis:", {
+          contentLength: content.length,
+          hasImages,
+          imageCount: imageMatches ? imageMatches.length : 0,
+          imageMatches,
+          fullContent: content,
+        });
+
         // Принудительно обновляем содержимое редактора
         // Используем setTimeout чтобы избежать конфликтов с обновлением
         setTimeout(() => {
+          console.log("⚡ Calling editor.commands.setContent...");
           editor.commands.setContent(content, false);
 
-          // Добавляем пустой параграф в конец если контент заканчивается изображением
+          // Проверяем, что получилось после setContent
           setTimeout(() => {
+            const newContent = editor.getHTML();
+            const newHasImages = newContent.includes("<img");
+            console.log("📋 After setContent:", {
+              newContentLength: newContent.length,
+              newHasImages,
+              newContent: newContent.substring(0, 200) + "...",
+              fullNewContent: newContent,
+            });
+
             const doc = editor.state.doc;
             const lastNode = doc.lastChild;
 
             if (lastNode && lastNode.type.name === "image") {
               editor.commands.insertContentAt(doc.content.size, "<p></p>");
             }
-          }, 100);
+          }, 50);
         }, 0);
       }
     }
