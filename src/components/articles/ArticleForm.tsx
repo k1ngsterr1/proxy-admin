@@ -78,13 +78,46 @@ export default function ArticleForm({
 
       // Обновляем все поля из новых данных статьи
       setTitle(article.title || "");
-      setContent(article.content || "");
       setImages(article.images || []);
       setArticleLang(article.lang || "ru");
 
+      // Создаем контент с изображениями из массива images
+      let contentWithImages = article.content || "";
+
+      // Если есть изображения в массиве images, добавляем их в контент
+      if (article.images && article.images.length > 0) {
+        console.log(
+          "Adding images from article.images to content:",
+          article.images
+        );
+
+        // Проверяем, есть ли уже эти изображения в контенте
+        const existingImageUrls = extractImagesFromContent(contentWithImages);
+
+        // Добавляем только те изображения, которых нет в контенте
+        const imagesToAdd = article.images.filter(
+          (imageUrl) => !existingImageUrls.includes(imageUrl)
+        );
+
+        if (imagesToAdd.length > 0) {
+          // Добавляем недостающие изображения в конец контента
+          const imageHtml = imagesToAdd
+            .map(
+              (imageUrl) =>
+                `<p><img src="${imageUrl}" alt="Article image" style="max-width: 100%; height: auto;" /></p>`
+            )
+            .join("");
+
+          contentWithImages = contentWithImages + imageHtml;
+          console.log("Added images to content:", imagesToAdd);
+        }
+      }
+
+      setContent(contentWithImages);
+
       console.log("Updated article data:", {
         title: article.title,
-        content: article.content?.substring(0, 100) + "...",
+        content: contentWithImages.substring(0, 100) + "...",
         lang: article.lang,
         images: article.images,
       });
