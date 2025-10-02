@@ -69,7 +69,7 @@ export default function ArticleForm({
 
       // Просто используем контент как есть, без манипуляций
       const articleContent = article.content || "";
-      
+
       console.log("Setting content as is:", {
         contentLength: articleContent.length,
         contentPreview: articleContent.substring(0, 200) + "...",
@@ -157,9 +157,11 @@ export default function ArticleForm({
             // Конвертируем data URL в файл
             const res = await fetch(src);
             const blob = await res.blob();
-            const fileName = `image-${Date.now()}-${i}.${blob.type.split("/")[1] || "png"}`;
+            const fileName = `image-${Date.now()}-${i}.${
+              blob.type.split("/")[1] || "png"
+            }`;
             const file = new File([blob], fileName, { type: blob.type });
-            
+
             newImageFiles.push(file);
             console.log(`Found new image ${i + 1} to upload:`, fileName);
           } catch (err) {
@@ -186,8 +188,12 @@ export default function ArticleForm({
       if (newImageFiles.length > 0) {
         // Если только одно изображение, отправляем как File
         // Если несколько, отправляем как массив
-        articleData.images = newImageFiles.length === 1 ? newImageFiles[0] : newImageFiles;
-        console.log("Adding new image files to article data:", newImageFiles.length);
+        articleData.images =
+          newImageFiles.length === 1 ? newImageFiles[0] : newImageFiles;
+        console.log(
+          "Adding new image files to article data:",
+          newImageFiles.length
+        );
       }
 
       if (isEditing && article?.id) {

@@ -239,7 +239,10 @@ export default function ArticleEditor({
         setTimeout(() => {
           const html = editor.getHTML();
           onChange(html);
-          console.log("🖼️ Image inserted, content updated:", html.substring(0, 200) + "...");
+          console.log(
+            "🖼️ Image inserted, content updated:",
+            html.substring(0, 200) + "..."
+          );
         }, 100);
       }
 
