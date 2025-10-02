@@ -24,31 +24,6 @@ export default function ArticleForm({ article, isEditing = false, lang = 'ru' }:
   const [articleLang, setArticleLang] = useState<'ru' | 'en'>(article?.lang || lang)
   const [title, setTitle] = useState(article?.title || "")
   const [content, setContent] = useState(article?.content || "")
-  const [images, setImages] = useState<string[]>(article?.images || [])
-  const [imageFile, setImageFile] = useState<File | null>(null)
-
-  // This function is now just for display purposes
-  const extractImagesFromContent = (htmlContent: string): string[] => {
-    const tempDiv = document.createElement('div')
-    tempDiv.innerHTML = htmlContent
-
-    const imgElements = tempDiv.querySelectorAll('img')
-
-    // Extract image URLs and filter out data URLs
-    const imageUrls = Array.from(imgElements)
-      .map(img => img.src)
-      .filter(src => !src.startsWith('data:')) // Only keep actual URLs, not data URLs
-
-    console.log('Extracted image URLs:', imageUrls)
-    return imageUrls
-  }
-
-  // Функция для преобразования URL в File
-  const urlToFile = async (url: string, filename: string, mimeType: string): Promise<File> => {
-    const response = await fetch(url)
-    const blob = await response.blob()
-    return new File([blob], filename, { type: mimeType })
-  }
 
   // При инициализации компонента для редактирования, добавляем существующие изображения в контент
   useEffect(() => {
@@ -79,10 +54,6 @@ export default function ArticleForm({ article, isEditing = false, lang = 'ru' }:
       console.log('Setting new content with images at the beginning')
       setContent(newContent)
     }
-
-    // Извлекаем URL изображений из контента для отслеживания
-    const extractedImages = extractImagesFromContent(content)
-    setImages(extractedImages)
   }, [isEditing, article])
 
   const createMutation = useMutation({
@@ -103,12 +74,10 @@ export default function ArticleForm({ article, isEditing = false, lang = 'ru' }:
     }
   })
 
-  // Handle file selection
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setImageFile(e.target.files[0])
-    }
-  }
+  // Handle file selection - now handled in the editor
+  // const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   // This is now handled in the ArticleEditor component
+  // }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -123,100 +92,49 @@ export default function ArticleForm({ article, isEditing = false, lang = 'ru' }:
       
       console.log('Submitting article with language:', articleLang)
 
-      // Получаем изображения из редактора
+      // Process images in content for uploading while preserving their positions
       const tempDiv = document.createElement('div')
       tempDiv.innerHTML = content
       const imgElements = tempDiv.querySelectorAll('img')
 
-      // Решение проблемы с дублированием изображений
-      // Создаем новый документ без изображений для отправки на сервер
-      const contentWithoutImages = document.createElement('div')
-      contentWithoutImages.innerHTML = content
+      // Collect all data URL images and convert them to files
+      const imageFiles: File[] = []
+      const imagePromises: Promise<void>[] = []
       
-      // Собираем все изображения из контента
-      const allImages = contentWithoutImages.querySelectorAll('img')
-      
-      // Удаляем дубликаты изображений
-      const uniqueImgSrcs = new Set<string>()
-      const uniqueImages: HTMLImageElement[] = []
-      
-      // Собираем уникальные изображения
-      Array.from(allImages).forEach(img => {
-        if (!uniqueImgSrcs.has(img.src)) {
-          uniqueImgSrcs.add(img.src)
-          uniqueImages.push(img as HTMLImageElement)
-        }
-      })
-      
-      // Удаляем все изображения из контента для отправки на сервер
-      Array.from(allImages).forEach(img => {
-        const parent = img.parentElement
-        if (parent) {
-          parent.removeChild(img)
-        }
-      })
-      
-      // Контент без изображений для отправки на сервер
-      const contentWithoutImagesHtml = contentWithoutImages.innerHTML
-      console.log('Content without images:', contentWithoutImagesHtml.substring(0, 100) + '...')
-      
-      // Получаем первое изображение с data URL или URL для загрузки
-      let imageFile: File | null = null
-      let imageUrl: string | null = null
-      
-      // Проверяем все уникальные изображения
-      for (const img of uniqueImages) {        
-        // Если это data URL, преобразуем его в File
+      imgElements.forEach((img, index) => {
         if (img.src.startsWith('data:image')) {
-          try {
-            const res = await fetch(img.src)
-            const blob = await res.blob()
-            const fileName = `image-${Date.now()}.${blob.type.split('/')[1] || 'png'}`
-            imageFile = new File([blob], fileName, { type: blob.type })
-            // Берем только первое изображение
-            break
-          } catch (err) {
-            console.error('Error converting data URL to file:', err)
-          }
+          const promise = (async () => {
+            try {
+              const res = await fetch(img.src)
+              const blob = await res.blob()
+              const fileName = `image-${Date.now()}-${index}.${blob.type.split('/')[1] || 'png'}`
+              const imageFile = new File([blob], fileName, { type: blob.type })
+              imageFiles.push(imageFile)
+            } catch (err) {
+              console.error('Error converting data URL to file:', err)
+            }
+          })()
+          imagePromises.push(promise)
         }
-        // Если это обычный URL (при редактировании), сохраняем его
-        else if (img.src.startsWith('http')) {
-          imageUrl = img.src
-          // Не прерываем цикл, продолжаем искать data URL
-        }
-      }
+      })
 
-      // Создаем данные статьи
+      // Wait for all image processing to complete
+      await Promise.all(imagePromises)
+
+      // Create article data with complete content (preserving image positions)
       const articleData: CreateArticleDto | UpdateArticleDto = {
         title,
-        content: contentWithoutImagesHtml, // Отправляем контент без изображений
-        lang: articleLang // Используем язык из состояния, который учитывает язык статьи при редактировании
+        content: content, // Send the complete content including images in their original positions
+        lang: articleLang
       }
       
       console.log('Article data with language:', articleData.lang)
+      console.log('Sending content with preserved image positions')
 
-      // Добавляем изображение из редактора (только одно)
-      if (imageFile) {
-        // Если нашли data URL, преобразованный в File
-        articleData.images = imageFile
-        console.log('Sending new image file')
-      } else if (imageUrl && isEditing) {
-        try {
-          // При редактировании, если нет нового изображения, но есть существующее URL
-          console.log('Converting existing image URL to File:', imageUrl)
-          // Преобразуем существующий URL в File для отправки в том же формате, что и при создании
-          const imageFileName = imageUrl.split('/').pop() || 'existing-image.jpg'
-          const imageFileType = 'image/jpeg' // Предполагаем JPEG, но можно определить по расширению
-          const imageFileObj = await urlToFile(imageUrl, imageFileName, imageFileType)
-
-          // Добавляем преобразованный файл в данные статьи
-          articleData.images = imageFileObj
-          console.log('Successfully converted URL to File for PATCH request')
-        } catch (err) {
-          console.error('Error converting image URL to File:', err)
-          // Если не удалось преобразовать, продолжаем без изображения
-          // API должен сохранить существующее изображение
-        }
+      // Add the first image file if any were converted from data URLs
+      if (imageFiles.length > 0) {
+        articleData.images = imageFiles[0] // Send only the first image file as per API expectation
+        console.log('Sending image file along with content')
       }
 
       if (isEditing && article?.id) {
