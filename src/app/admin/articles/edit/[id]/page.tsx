@@ -1,20 +1,28 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useParams } from "next/navigation"
-import ArticleForm from "@/components/articles/ArticleForm"
-import AdminLayout from "@/components/layout/AdminLayout"
-import { useQuery } from "@tanstack/react-query"
-import { articlesApi, Article } from "@/lib/api/articles"
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import ArticleForm from "@/components/articles/ArticleForm";
+import AdminLayout from "@/components/layout/AdminLayout";
+import { useQuery } from "@tanstack/react-query";
+import { articlesApi, Article } from "@/lib/api/articles";
 
 export default function EditArticlePage() {
-  const params = useParams()
-  const id = params.id as string
+  const params = useParams();
+  const id = params.id as string;
 
-  const { data: article, isLoading, error } = useQuery({
-    queryKey: ['article', id],
-    queryFn: () => articlesApi.getById(id)
-  })
+  const {
+    data: article,
+    isLoading,
+    error,
+  } = useQuery<Article>({
+    queryKey: ["article", id],
+    queryFn: () => articlesApi.getById(id),
+    staleTime: 0, // Данные всегда считаются устаревшими
+    gcTime: 0, // Не кешируем данные (новое название для cacheTime)
+    refetchOnMount: true, // Перезагружаем при монтировании
+    refetchOnWindowFocus: true, // Перезагружаем при фокусе окна
+  });
 
   if (isLoading) {
     return (
@@ -26,7 +34,7 @@ export default function EditArticlePage() {
           </div>
         </div>
       </AdminLayout>
-    )
+    );
   }
 
   if (error) {
@@ -39,7 +47,7 @@ export default function EditArticlePage() {
           </div>
         </div>
       </AdminLayout>
-    )
+    );
   }
 
   return (
@@ -50,5 +58,5 @@ export default function EditArticlePage() {
         <ArticleForm article={article} isEditing={true} lang={article?.lang} />
       </div>
     </AdminLayout>
-  )
+  );
 }

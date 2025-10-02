@@ -41,37 +41,134 @@ export default function ArticleForm({
   );
   const [title, setTitle] = useState(article?.title || "");
   const [content, setContent] = useState(article?.content || "");
+  const [finalContent, setFinalContent] = useState(""); // структурированный контент с маркерами
+  const [images, setImages] = useState<string[]>(article?.images || []);
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
-  // При инициализации компонента для редактирования, добавляем существующие изображения в контент
+  // This function is now just for display purposes
+  const extractImagesFromContent = (htmlContent: string): string[] => {
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = htmlContent;
+
+    const imgElements = tempDiv.querySelectorAll("img");
+
+    // Extract image URLs and filter out data URLs
+    const imageUrls = Array.from(imgElements)
+      .map((img) => img.src)
+      .filter((src) => !src.startsWith("data:")); // Only keep actual URLs, not data URLs
+
+    console.log("Extracted image URLs:", imageUrls);
+    return imageUrls;
+  };
+
+  // Функция для преобразования URL в File
+  const urlToFile = async (
+    url: string,
+    filename: string,
+    mimeType: string
+  ): Promise<File> => {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new File([blob], filename, { type: mimeType });
+  };
+
+  // Обновляем данные при изменении статьи
   useEffect(() => {
-    // Если редактируем статью, обновляем язык из статьи
-    if (isEditing && article?.lang) {
-      console.log("Setting language from article:", article.lang);
-      setArticleLang(article.lang);
-    }
+    if (article) {
+      console.log("Article data updated:", article);
 
-    // Только при первой загрузке для редактирования
-    if (isEditing && article?.images && article.images.length > 0) {
-      console.log("Article has images:", article.images);
+      // Обновляем все поля из новых данных статьи
+      setTitle(article.title || "");
+      setImages(article.images || []);
+      setArticleLang(article.lang || "ru");
 
-      // Создаем новый HTML с изображениями
-      // Добавляем изображения в начало контента, чтобы они были видны
-      let imageHtml = "";
-      article.images.forEach((imageUrl) => {
-        if (typeof imageUrl === "string") {
-          console.log("Adding image to content:", imageUrl);
-          imageHtml += `<div><img src="${imageUrl}" alt="Article image" /></div>`;
+      // ХАРДКОДНАЯ ОЧИСТКА: Удаляем ВСЕ изображения из контента
+      let finalContent = article.content || "";
+
+      console.log("🧹 HARD CLEANING: Removing all images from content");
+      console.log("Before cleaning:", finalContent);
+
+      // Удаляем все img теги из контента (любые варианты)
+      finalContent = finalContent.replace(/<img[^>]*>/gi, "");
+      // Удаляем пустые img теги
+      finalContent = finalContent.replace(/<img\s*\/?>/gi, "");
+      // Удаляем пустые параграфы после удаления изображений
+      finalContent = finalContent.replace(/<p>\s*<\/p>/gi, "");
+      // Убираем лишние пробелы
+      finalContent = finalContent.replace(/\s{2,}/g, " ").trim();
+
+      console.log("After cleaning:", finalContent);
+
+      // СОЗДАЕМ СТРУКТУРИРОВАННЫЙ КОНТЕНТ с маркерами для изображений
+      if (article.images && article.images.length > 0) {
+        console.log("🏗️ Building structured content with image markers");
+
+        // Создаем уникальные маркеры для каждого изображения
+        const imageMarkers = article.images.map((imageUrl, index) => ({
+          id: `image-${Date.now()}-${index}`,
+          url: imageUrl,
+          marker: `<!--IMAGE_PLACEHOLDER_${index}-->`,
+        }));
+
+        console.log("� Image markers created:", imageMarkers);
+
+        // Если контент короткий, добавляем изображения в начало
+        if (finalContent.trim().length < 50) {
+          const imageMarkersHtml = imageMarkers
+            .map(
+              (img) =>
+                `<p data-image-id="${img.id}" data-image-url="${img.url}">${img.marker}</p>`
+            )
+            .join("");
+          finalContent =
+            imageMarkersHtml + (finalContent ? "<p></p>" + finalContent : "");
+        } else {
+          // Добавляем изображения в конец
+          const imageMarkersHtml = imageMarkers
+            .map(
+              (img) =>
+                `<p data-image-id="${img.id}" data-image-url="${img.url}">${img.marker}</p>`
+            )
+            .join("");
+          finalContent = finalContent + "<p></p>" + imageMarkersHtml;
         }
+
+        console.log("📝 Final structured content:", finalContent);
+
+        // Устанавливаем finalContent в state чтобы он был доступен в Editor
+        setFinalContent(finalContent);
+      }
+
+      // Устанавливаем финальный контент
+      console.log("🚀 Setting final content:", {
+        originalLength: (article.content || "").length,
+        finalLength: finalContent.length,
+        originalContent: article.content,
+        finalContent: finalContent,
       });
 
-      // Создаем новый контент с изображениями в начале
-      const newContent = imageHtml + content;
+      setContent(finalContent);
 
-      // Обновляем контент в редакторе
-      console.log("Setting new content with images at the beginning");
-      setContent(newContent);
+      // Принудительно обновляем контент через небольшую задержку
+      setTimeout(() => {
+        console.log("⏰ Force updating content after delay");
+        setContent(finalContent);
+      }, 100);
+
+      console.log("Updated article data:", {
+        title: article.title,
+        content: finalContent.substring(0, 100) + "...",
+        lang: article.lang,
+        images: article.images,
+      });
+    } else if (!isEditing) {
+      // Сбрасываем поля для новой статьи
+      setTitle("");
+      setContent("");
+      setImages([]);
+      setArticleLang(lang);
     }
-  }, [isEditing, article]);
+  }, [article, isEditing, lang]);
 
   const createMutation = useMutation({
     mutationFn: (article: CreateArticleDto) => articlesApi.create(article), // без language
@@ -84,16 +181,23 @@ export default function ArticleForm({
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateArticleDto }) =>
       articlesApi.update(id, data),
-    onSuccess: () => {
+    onSuccess: (updatedArticle, variables) => {
+      // Инвалидируем список статей
       queryClient.invalidateQueries({ queryKey: ["articles"] });
+      // Инвалидируем конкретную статью
+      queryClient.invalidateQueries({ queryKey: ["article", variables.id] });
+      // Также можно обновить кеш напрямую
+      queryClient.setQueryData(["article", variables.id], updatedArticle);
       router.push("/admin/articles");
     },
   });
 
-  // Handle file selection - now handled in the editor
-  // const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  //   // This is now handled in the ArticleEditor component
-  // }
+  // Handle file selection
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setImageFile(e.target.files[0]);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,51 +214,64 @@ export default function ArticleForm({
 
       console.log("Submitting article with language:", articleLang);
 
-      // Process images in content for uploading while preserving their positions
+      // Оставляем контент как есть - со всеми изображениями в правильных местах
+      const finalContent = content;
+
+      // Извлекаем URL изображений из контента для массива images (но не удаляем их из контента)
       const tempDiv = document.createElement("div");
       tempDiv.innerHTML = content;
       const imgElements = tempDiv.querySelectorAll("img");
 
-      // Collect all data URL images and convert them to files
-      const imageFiles: File[] = [];
-      const imagePromises: Promise<void>[] = [];
+      // Собираем уникальные URL изображений
+      const imageUrls = Array.from(imgElements)
+        .map((img) => img.src)
+        .filter((src, index, array) => array.indexOf(src) === index); // убираем дубликаты
 
-      imgElements.forEach((img, index) => {
-        if (img.src.startsWith("data:image")) {
-          const promise = (async () => {
-            try {
-              const res = await fetch(img.src);
-              const blob = await res.blob();
-              const fileName = `image-${Date.now()}-${index}.${
-                blob.type.split("/")[1] || "png"
-              }`;
-              const imageFile = new File([blob], fileName, { type: blob.type });
-              imageFiles.push(imageFile);
-            } catch (err) {
-              console.error("Error converting data URL to file:", err);
-            }
-          })();
-          imagePromises.push(promise);
-        }
+      console.log("Final content with images:", {
+        contentLength: finalContent.length,
+        imageUrls: imageUrls,
+        contentPreview: finalContent.substring(0, 200) + "...",
       });
 
-      // Wait for all image processing to complete
-      await Promise.all(imagePromises);
+      // Ищем новые изображения (data URLs) для загрузки
+      let newImageFile: File | null = null;
 
-      // Create article data with complete content (preserving image positions)
+      // Проверяем есть ли новые изображения (data URLs) в контенте
+      for (const url of imageUrls) {
+        if (url.startsWith("data:image")) {
+          try {
+            const res = await fetch(url);
+            const blob = await res.blob();
+            const fileName = `image-${Date.now()}.${
+              blob.type.split("/")[1] || "png"
+            }`;
+            newImageFile = new File([blob], fileName, { type: blob.type });
+            console.log("Found new image to upload:", fileName);
+            break; // Берем только первое новое изображение
+          } catch (err) {
+            console.error("Error converting data URL to file:", err);
+          }
+        }
+      }
+
+      // Создаем данные статьи - отправляем контент с изображениями как есть
       const articleData: CreateArticleDto | UpdateArticleDto = {
         title,
-        content: content, // Send the complete content including images in their original positions
+        content: finalContent, // Отправляем полный контент с изображениями в правильных местах
         lang: articleLang,
       };
 
-      console.log("Article data with language:", articleData.lang);
-      console.log("Sending content with preserved image positions");
+      console.log("Article data:", {
+        title: articleData.title,
+        contentLength: articleData.content?.length || 0,
+        lang: articleData.lang,
+        hasNewImage: !!newImageFile,
+      });
 
-      // Add the first image file if any were converted from data URLs
-      if (imageFiles.length > 0) {
-        articleData.images = imageFiles[0]; // Send only the first image file as per API expectation
-        console.log("Sending image file along with content");
+      // Добавляем новое изображение если есть
+      if (newImageFile) {
+        articleData.images = newImageFile;
+        console.log("Adding new image file to article data");
       }
 
       if (isEditing && article?.id) {
@@ -200,7 +317,12 @@ export default function ArticleForm({
           </div>
           <div className="space-y-2">
             <Label htmlFor="content">Содержание</Label>
-            <ArticleEditor content={content} onChange={setContent} />
+            <ArticleEditor
+              content={finalContent || content}
+              value={finalContent || content}
+              images={images}
+              onChange={setContent}
+            />
           </div>
         </CardContent>
         <CardFooter className="flex justify-between">

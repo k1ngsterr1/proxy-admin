@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Users, Tag, FileClock, DollarSign } from "lucide-react";
+import { Users, Tag, FileClock, DollarSign, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -180,7 +180,7 @@ export default function Sidebar() {
                 </Link>
               )}
             </li>
-            {/* <li>
+            <li>
               {collapsed ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -209,8 +209,6 @@ export default function Sidebar() {
                 </Link>
               )}
             </li>
-
-      */}
           </TooltipProvider>
         </ul>
       </nav>
