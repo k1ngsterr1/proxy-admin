@@ -199,15 +199,28 @@ export default function ArticleEditor({
       const formData = new FormData();
       formData.append("image", imageFile);
 
-      const response = await axios.post("/api/upload-image", formData, {
+      const response = await axios.post("/articles/upload-image", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
       });
 
+      console.log("Image upload response:", response.data);
       return response.data.imageUrl;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error uploading image:", error);
+      
+      // Show user-friendly error message
+      if (error.response?.status === 413) {
+        alert("Image file is too large. Please choose a smaller image (max 10MB).");
+      } else if (error.response?.status === 400) {
+        alert("Invalid file type. Please select a valid image file (JPG, PNG, GIF, WebP).");
+      } else if (error.response?.status === 401) {
+        alert("You are not authorized to upload images. Please log in again.");
+      } else {
+        alert("Failed to upload image. Please try again.");
+      }
+      
       return null;
     } finally {
       setIsUploading(false);
