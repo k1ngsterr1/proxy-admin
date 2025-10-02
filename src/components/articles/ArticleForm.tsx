@@ -41,25 +41,10 @@ export default function ArticleForm({
   );
   const [title, setTitle] = useState(article?.title || "");
   const [content, setContent] = useState(article?.content || "");
-  const [finalContent, setFinalContent] = useState(""); // структурированный контент с маркерами
   const [images, setImages] = useState<string[]>(article?.images || []);
   const [imageFile, setImageFile] = useState<File | null>(null);
 
-  // This function is now just for display purposes
-  const extractImagesFromContent = (htmlContent: string): string[] => {
-    const tempDiv = document.createElement("div");
-    tempDiv.innerHTML = htmlContent;
-
-    const imgElements = tempDiv.querySelectorAll("img");
-
-    // Extract image URLs and filter out data URLs
-    const imageUrls = Array.from(imgElements)
-      .map((img) => img.src)
-      .filter((src) => !src.startsWith("data:")); // Only keep actual URLs, not data URLs
-
-    console.log("Extracted image URLs:", imageUrls);
-    return imageUrls;
-  };
+  // Функция удалена - больше не манипулируем структурой контента
 
   // Функция для преобразования URL в File
   const urlToFile = async (
@@ -82,82 +67,19 @@ export default function ArticleForm({
       setImages(article.images || []);
       setArticleLang(article.lang || "ru");
 
-      // ХАРДКОДНАЯ ОЧИСТКА: Удаляем ВСЕ изображения из контента
-      let finalContent = article.content || "";
-
-      console.log("🧹 HARD CLEANING: Removing all images from content");
-      console.log("Before cleaning:", finalContent);
-
-      // Удаляем все img теги из контента (любые варианты)
-      finalContent = finalContent.replace(/<img[^>]*>/gi, "");
-      // Удаляем пустые img теги
-      finalContent = finalContent.replace(/<img\s*\/?>/gi, "");
-      // Удаляем пустые параграфы после удаления изображений
-      finalContent = finalContent.replace(/<p>\s*<\/p>/gi, "");
-      // Убираем лишние пробелы
-      finalContent = finalContent.replace(/\s{2,}/g, " ").trim();
-
-      console.log("After cleaning:", finalContent);
-
-      // СОЗДАЕМ СТРУКТУРИРОВАННЫЙ КОНТЕНТ с маркерами для изображений
-      if (article.images && article.images.length > 0) {
-        console.log("🏗️ Building structured content with image markers");
-
-        // Создаем уникальные маркеры для каждого изображения
-        const imageMarkers = article.images.map((imageUrl, index) => ({
-          id: `image-${Date.now()}-${index}`,
-          url: imageUrl,
-          marker: `<!--IMAGE_PLACEHOLDER_${index}-->`,
-        }));
-
-        console.log("� Image markers created:", imageMarkers);
-
-        // Если контент короткий, добавляем изображения в начало
-        if (finalContent.trim().length < 50) {
-          const imageMarkersHtml = imageMarkers
-            .map(
-              (img) =>
-                `<p data-image-id="${img.id}" data-image-url="${img.url}">${img.marker}</p>`
-            )
-            .join("");
-          finalContent =
-            imageMarkersHtml + (finalContent ? "<p></p>" + finalContent : "");
-        } else {
-          // Добавляем изображения в конец
-          const imageMarkersHtml = imageMarkers
-            .map(
-              (img) =>
-                `<p data-image-id="${img.id}" data-image-url="${img.url}">${img.marker}</p>`
-            )
-            .join("");
-          finalContent = finalContent + "<p></p>" + imageMarkersHtml;
-        }
-
-        console.log("📝 Final structured content:", finalContent);
-
-        // Устанавливаем finalContent в state чтобы он был доступен в Editor
-        setFinalContent(finalContent);
-      }
-
-      // Устанавливаем финальный контент
-      console.log("🚀 Setting final content:", {
-        originalLength: (article.content || "").length,
-        finalLength: finalContent.length,
-        originalContent: article.content,
-        finalContent: finalContent,
+      // Просто используем контент как есть, без манипуляций
+      const articleContent = article.content || "";
+      
+      console.log("Setting content as is:", {
+        contentLength: articleContent.length,
+        contentPreview: articleContent.substring(0, 200) + "...",
       });
 
-      setContent(finalContent);
-
-      // Принудительно обновляем контент через небольшую задержку
-      setTimeout(() => {
-        console.log("⏰ Force updating content after delay");
-        setContent(finalContent);
-      }, 100);
+      setContent(articleContent);
 
       console.log("Updated article data:", {
         title: article.title,
-        content: finalContent.substring(0, 100) + "...",
+        content: articleContent.substring(0, 100) + "...",
         lang: article.lang,
         images: article.images,
       });
@@ -214,50 +136,42 @@ export default function ArticleForm({
 
       console.log("Submitting article with language:", articleLang);
 
-      // Оставляем контент как есть - со всеми изображениями в правильных местах
-      const finalContent = content;
+      // Получаем финальный контент как есть
+      let finalContent = content;
+      let newImageFiles: File[] = [];
 
-      // Извлекаем URL изображений из контента для массива images (но не удаляем их из контента)
+      // Ищем data URLs в контенте и заменяем их на сервер-файлы
       const tempDiv = document.createElement("div");
       tempDiv.innerHTML = content;
       const imgElements = tempDiv.querySelectorAll("img");
 
-      // Собираем уникальные URL изображений
-      const imageUrls = Array.from(imgElements)
-        .map((img) => img.src)
-        .filter((src, index, array) => array.indexOf(src) === index); // убираем дубликаты
+      console.log("Processing images in content:", imgElements.length);
 
-      console.log("Final content with images:", {
-        contentLength: finalContent.length,
-        imageUrls: imageUrls,
-        contentPreview: finalContent.substring(0, 200) + "...",
-      });
+      // Обрабатываем каждое изображение
+      for (let i = 0; i < imgElements.length; i++) {
+        const img = imgElements[i];
+        const src = img.src;
 
-      // Ищем новые изображения (data URLs) для загрузки
-      let newImageFile: File | null = null;
-
-      // Проверяем есть ли новые изображения (data URLs) в контенте
-      for (const url of imageUrls) {
-        if (url.startsWith("data:image")) {
+        if (src.startsWith("data:image")) {
           try {
-            const res = await fetch(url);
+            // Конвертируем data URL в файл
+            const res = await fetch(src);
             const blob = await res.blob();
-            const fileName = `image-${Date.now()}.${
-              blob.type.split("/")[1] || "png"
-            }`;
-            newImageFile = new File([blob], fileName, { type: blob.type });
-            console.log("Found new image to upload:", fileName);
-            break; // Берем только первое новое изображение
+            const fileName = `image-${Date.now()}-${i}.${blob.type.split("/")[1] || "png"}`;
+            const file = new File([blob], fileName, { type: blob.type });
+            
+            newImageFiles.push(file);
+            console.log(`Found new image ${i + 1} to upload:`, fileName);
           } catch (err) {
             console.error("Error converting data URL to file:", err);
           }
         }
       }
 
-      // Создаем данные статьи - отправляем контент с изображениями как есть
+      // Создаем данные статьи
       const articleData: CreateArticleDto | UpdateArticleDto = {
         title,
-        content: finalContent, // Отправляем полный контент с изображениями в правильных местах
+        content: finalContent, // Отправляем контент с изображениями как есть
         lang: articleLang,
       };
 
@@ -265,13 +179,15 @@ export default function ArticleForm({
         title: articleData.title,
         contentLength: articleData.content?.length || 0,
         lang: articleData.lang,
-        hasNewImage: !!newImageFile,
+        newImagesCount: newImageFiles.length,
       });
 
-      // Добавляем новое изображение если есть
-      if (newImageFile) {
-        articleData.images = newImageFile;
-        console.log("Adding new image file to article data");
+      // Добавляем новые изображения если есть
+      if (newImageFiles.length > 0) {
+        // Если только одно изображение, отправляем как File
+        // Если несколько, отправляем как массив
+        articleData.images = newImageFiles.length === 1 ? newImageFiles[0] : newImageFiles;
+        console.log("Adding new image files to article data:", newImageFiles.length);
       }
 
       if (isEditing && article?.id) {
@@ -318,8 +234,8 @@ export default function ArticleForm({
           <div className="space-y-2">
             <Label htmlFor="content">Содержание</Label>
             <ArticleEditor
-              content={finalContent || content}
-              value={finalContent || content}
+              content={content}
+              value={content}
               images={images}
               onChange={setContent}
             />

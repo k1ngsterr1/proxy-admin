@@ -159,74 +159,20 @@ export default function ArticleEditor({
     },
   });
 
-  // Обработка структурированного контента с маркерами изображений
+  // Простое обновление контента без сложной обработки маркеров
   useEffect(() => {
     if (!editor) return;
 
-    console.log("🔄 Processing structured content with image markers");
+    console.log("🔄 Updating editor content");
     console.log("Current content:", currentContent);
 
-    if (currentContent && currentContent.includes("IMAGE_PLACEHOLDER_")) {
-      processStructuredContent();
-    } else if (currentContent !== editor.getHTML()) {
-      // Обычное обновление контента если нет маркеров
-      console.log("📝 Simple content update");
+    if (currentContent !== editor.getHTML()) {
+      console.log("📝 Setting content in editor");
       editor.commands.setContent(currentContent || "");
     }
   }, [currentContent, editor]);
 
-  const processStructuredContent = () => {
-    if (!editor || !currentContent) return;
-
-    console.log("🧹 CLEARING editor and processing structured content");
-    console.log("Raw content before cleaning:", currentContent);
-    console.log("Available images array:", images);
-
-    // ХАРДКОДНО ОЧИЩАЕМ ВСЕ ДУБЛИ ИЗОБРАЖЕНИЙ
-    let cleanedContent = currentContent;
-
-    // Удаляем все теги img из контента (они дублируются)
-    cleanedContent = cleanedContent.replace(/<img[^>]*>/gi, "");
-
-    // Удаляем пустые параграфы после удаления изображений
-    cleanedContent = cleanedContent.replace(/<p[^>]*>\s*<\/p>/gi, "");
-
-    // Удаляем множественные br теги
-    cleanedContent = cleanedContent.replace(/(<br\s*\/?>){2,}/gi, "<br>");
-
-    console.log("🧽 Content after cleaning:", cleanedContent);
-
-    // Очищаем редактор полностью
-    editor.commands.clearContent();
-
-    // Разбираем очищенный контент по частям
-    const parts = cleanedContent.split(
-      /(<p data-image-id="[^"]*" data-image-url="[^"]*"><!--IMAGE_PLACEHOLDER_\d+--><\/p>)/
-    );
-
-    // Вставляем очищенный текстовый контент
-    if (cleanedContent.trim()) {
-      console.log("📝 INSERTING cleaned text content");
-      editor.commands.insertContent(cleanedContent);
-    }
-
-    // Добавляем изображения из массива images
-    if (images && images.length > 0) {
-      images.forEach((imageUrl, index) => {
-        console.log(`🖼️ INSERTING image ${index + 1}: ${imageUrl}`);
-
-        // Добавляем разрыв перед изображением если есть текстовый контент
-        if (cleanedContent.trim()) {
-          editor.commands.insertContent("<p></p>");
-        }
-
-        // Вставляем изображение используя setImage команду
-        editor.commands.setImage({ src: imageUrl });
-      });
-    }
-
-    console.log("✅ Structured content processing COMPLETE");
-  };
+  // Удаляем функцию processStructuredContent так как она больше не нужна
 
   // Обработчик выбора изображения
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -274,11 +220,11 @@ export default function ArticleEditor({
       // Загружаем изображение на сервер
       const imageUrl = await uploadImage();
 
-      // Если загрузка не удалась, используем предпросмотр
+      // Если загрузка не удалась, используем предпросмотр (data URL)
       const src = imageUrl || imagePreview;
 
       if (src) {
-        // Вставляем изображение в редактор
+        // Вставляем изображение в редактор в текущую позицию курсора
         editor
           .chain()
           .focus()
@@ -289,9 +235,12 @@ export default function ArticleEditor({
           })
           .run();
 
-        // Обновляем содержимое
-        const html = editor.getHTML();
-        onChange(html);
+        // Сразу обновляем содержимое в родительском компоненте
+        setTimeout(() => {
+          const html = editor.getHTML();
+          onChange(html);
+          console.log("🖼️ Image inserted, content updated:", html.substring(0, 200) + "...");
+        }, 100);
       }
 
       // Закрываем диалог
