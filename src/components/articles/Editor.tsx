@@ -209,18 +209,22 @@ export default function ArticleEditor({
       return response.data.imageUrl;
     } catch (error: any) {
       console.error("Error uploading image:", error);
-      
+
       // Show user-friendly error message
       if (error.response?.status === 413) {
-        alert("Image file is too large. Please choose a smaller image (max 10MB).");
+        alert(
+          "Image file is too large. Please choose a smaller image (max 10MB)."
+        );
       } else if (error.response?.status === 400) {
-        alert("Invalid file type. Please select a valid image file (JPG, PNG, GIF, WebP).");
+        alert(
+          "Invalid file type. Please select a valid image file (JPG, PNG, GIF, WebP)."
+        );
       } else if (error.response?.status === 401) {
         alert("You are not authorized to upload images. Please log in again.");
       } else {
         alert("Failed to upload image. Please try again.");
       }
-      
+
       return null;
     } finally {
       setIsUploading(false);
