@@ -11,6 +11,7 @@ interface MainImageUploadProps {
   onImageChange: (file: File | null) => void;
   onUrlChange: (url: string) => void;
   onRemove: () => void;
+  isUploading?: boolean;
 }
 
 export default function MainImageUpload({
@@ -18,6 +19,7 @@ export default function MainImageUpload({
   onImageChange,
   onUrlChange,
   onRemove,
+  isUploading = false,
 }: MainImageUploadProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(
     mainImageUrl || null
@@ -90,7 +92,11 @@ export default function MainImageUpload({
             type="file"
             accept="image/*"
             onChange={handleFileChange}
+            disabled={isUploading}
           />
+          {isUploading && (
+            <div className="text-sm text-gray-500">Загрузка...</div>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -101,7 +107,11 @@ export default function MainImageUpload({
             placeholder="https://example.com/image.jpg"
             value={urlInput}
             onChange={(e) => handleUrlChange(e.target.value)}
+            disabled={isUploading}
           />
+          {isUploading && (
+            <div className="text-sm text-gray-500">Сохранение...</div>
+          )}
         </div>
       </div>
     </div>

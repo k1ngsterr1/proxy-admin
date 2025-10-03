@@ -72,6 +72,36 @@ export default function ArticleForm({
     },
   });
 
+  // Мутация для обновления тегов статьи
+  const updateTagsMutation = useMutation({
+    mutationFn: ({ id, tags }: { id: string; tags: string[] }) =>
+      articlesApi.updateArticleTags(id, tags),
+    onSuccess: (updatedArticle) => {
+      queryClient.invalidateQueries({ queryKey: ["articles"] });
+      queryClient.setQueryData(["article", updatedArticle.id], updatedArticle);
+    },
+  });
+
+  // Мутация для сохранения главного изображения по файлу
+  const setMainImageMutation = useMutation({
+    mutationFn: ({ id, mainImage }: { id: string; mainImage: File }) =>
+      articlesApi.setMainImage(id, mainImage),
+    onSuccess: (updatedArticle) => {
+      queryClient.invalidateQueries({ queryKey: ["articles"] });
+      queryClient.setQueryData(["article", updatedArticle.id], updatedArticle);
+    },
+  });
+
+  // Мутация для сохранения главного изображения по URL
+  const setMainImageByUrlMutation = useMutation({
+    mutationFn: ({ id, mainImageUrl }: { id: string; mainImageUrl: string }) =>
+      articlesApi.setMainImageByUrl(id, mainImageUrl),
+    onSuccess: (updatedArticle) => {
+      queryClient.invalidateQueries({ queryKey: ["articles"] });
+      queryClient.setQueryData(["article", updatedArticle.id], updatedArticle);
+    },
+  });
+
   // Функция удалена - больше не манипулируем структурой контента
 
   // Функция для преобразования URL в File
@@ -156,18 +186,26 @@ export default function ArticleForm({
     }
   };
 
-  // Обработчик для главного изображения
-  const handleMainImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setMainImage(file);
+  // Обработчик для главного изображения по URL
+  const handleMainImageUrlChange = async (url: string) => {
+    setMainImageUrl(url);
+    setMainImagePreview(url);
+    setMainImage(null); // Очищаем файл, так как теперь используем URL
 
-      // Создаем превью
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setMainImagePreview(event.target?.result as string);
-      };
-      reader.readAsDataURL(file);
+    // Если статья уже существует, сразу сохраняем URL главного изображения
+    if (isEditing && article?.id && url.trim()) {
+      try {
+        await setMainImageByUrlMutation.mutateAsync({
+          id: article.id,
+          mainImageUrl: url,
+        });
+        console.log(
+          "Main image URL saved successfully for article:",
+          article.id
+        );
+      } catch (error) {
+        console.error("Failed to save main image URL:", error);
+      }
     }
   };
 
@@ -189,7 +227,9 @@ export default function ArticleForm({
     // Создаем новые теги
     for (const tagName of newTagsToCreate) {
       try {
+        console.log("Creating new tag:", tagName.trim());
         await createTagMutation.mutateAsync(tagName.trim());
+        console.log("Tag created successfully:", tagName.trim());
       } catch (error) {
         console.error(`Failed to create tag: ${tagName}`, error);
       }
@@ -197,6 +237,19 @@ export default function ArticleForm({
 
     // Обновляем состояние тегов
     setTags(newTags);
+
+    // Если статья уже существует, сразу сохраняем теги
+    if (isEditing && article?.id) {
+      try {
+        await updateTagsMutation.mutateAsync({
+          id: article.id,
+          tags: newTags,
+        });
+        console.log("Tags saved successfully for article:", article.id);
+      } catch (error) {
+        console.error("Failed to save tags:", error);
+      }
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -321,12 +374,44 @@ export default function ArticleForm({
             <Label>Главное изображение</Label>
             <MainImageUpload
               mainImageUrl={mainImageUrl}
-              onImageChange={setMainImage}
-              onUrlChange={(url) => {
-                setMainImageUrl(url);
-                setMainImagePreview(url);
+              onImageChange={async (file) => {
+                if (file) {
+                  setMainImage(file);
+
+                  // Создаем превью
+                  const reader = new FileReader();
+                  reader.onload = (event) => {
+                    setMainImagePreview(event.target?.result as string);
+                  };
+                  reader.readAsDataURL(file);
+
+                  // Если статья уже существует, сразу сохраняем главное изображение
+                  if (isEditing && article?.id) {
+                    try {
+                      const updatedArticle =
+                        await setMainImageMutation.mutateAsync({
+                          id: article.id,
+                          mainImage: file,
+                        });
+                      setMainImageUrl(updatedArticle.mainImageUrl || "");
+                      console.log(
+                        "Main image saved successfully for article:",
+                        article.id
+                      );
+                    } catch (error) {
+                      console.error("Failed to save main image:", error);
+                    }
+                  }
+                } else {
+                  setMainImage(null);
+                }
               }}
+              onUrlChange={handleMainImageUrlChange}
               onRemove={removeMainImage}
+              isUploading={
+                setMainImageMutation.isPending ||
+                setMainImageByUrlMutation.isPending
+              }
             />
           </div>
           <div className="space-y-2">
@@ -336,6 +421,7 @@ export default function ArticleForm({
               availableTags={allTags}
               onTagsChange={handleTagsChange}
               isCreatingTag={createTagMutation.isPending}
+              isSavingTags={updateTagsMutation.isPending}
             />
           </div>
 

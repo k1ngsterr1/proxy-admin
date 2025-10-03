@@ -13,6 +13,7 @@ interface TagManagerProps {
   availableTags?: Tag[];
   onTagsChange: (tags: string[]) => void;
   isCreatingTag?: boolean;
+  isSavingTags?: boolean;
 }
 
 export default function TagManager({
@@ -20,6 +21,7 @@ export default function TagManager({
   availableTags = [],
   onTagsChange,
   isCreatingTag = false,
+  isSavingTags = false,
 }: TagManagerProps) {
   const [newTag, setNewTag] = useState("");
 
@@ -45,7 +47,12 @@ export default function TagManager({
       {/* Текущие теги */}
       {tags.length > 0 && (
         <div>
-          <Label className="text-sm font-medium">Выбранные теги:</Label>
+          <Label className="text-sm font-medium">
+            Выбранные теги:
+            {isSavingTags && (
+              <span className="ml-2 text-blue-500">сохраняется...</span>
+            )}
+          </Label>
           <div className="flex flex-wrap gap-2 mt-2">
             {tags.map((tag, index) => (
               <Badge
