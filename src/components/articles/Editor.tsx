@@ -16,6 +16,7 @@ import {
   TextQuote,
   Code,
   Link as LinkIcon,
+  Star,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -45,6 +46,8 @@ interface ArticleEditorProps {
   onChange: (content: string) => void;
   value?: string; // для обратной совместимости
   images?: string[]; // массив URL изображений
+  mainImageUrl?: string; // главное изображение
+  onMainImageChange?: (url: string) => void; // колбэк для изменения главного изображения
 }
 
 export default function ArticleEditor({
@@ -52,6 +55,8 @@ export default function ArticleEditor({
   onChange,
   value,
   images = [],
+  mainImageUrl,
+  onMainImageChange,
 }: ArticleEditorProps) {
   // Используем value если он есть, иначе content
   const currentContent = value || content;
@@ -323,6 +328,13 @@ export default function ArticleEditor({
   const redo = () => editor?.chain().focus().redo().run();
   const unsetLink = () => editor?.chain().focus().unsetLink().run();
 
+  // Функция для установки изображения как главное
+  const setAsMainImage = (imageUrl: string) => {
+    if (onMainImageChange) {
+      onMainImageChange(imageUrl);
+    }
+  };
+
   return (
     <div className="border border-border rounded-md overflow-hidden">
       <div className="bg-secondary p-2 flex flex-wrap gap-1 border-b border-border">
@@ -553,33 +565,56 @@ export default function ArticleEditor({
       <div className="tiptap-editor-wrapper">
         {editor && (
           <BubbleMenu editor={editor} tippyOptions={{ duration: 100 }}>
-            <div className="flex bg-white border rounded-md shadow-sm">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={toggleBold}
-              >
-                <Bold size={14} />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={toggleItalic}
-              >
-                <Italic size={14} />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setLinkDialogOpen(true)}
-                className={editor.isActive("link") ? "bg-accent" : ""}
-              >
-                <LinkIcon size={14} />
-              </Button>
-            </div>
+            {editor.isActive("image") ? (
+              // Меню для изображений
+              <div className="flex bg-white border rounded-md shadow-sm">
+                {onMainImageChange && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const selectedImage = editor.getAttributes("image");
+                      if (selectedImage.src) {
+                        setAsMainImage(selectedImage.src);
+                      }
+                    }}
+                    title="Установить как главное изображение"
+                  >
+                    <Star size={14} />
+                  </Button>
+                )}
+              </div>
+            ) : (
+              // Обычное меню для текста
+              <div className="flex bg-white border rounded-md shadow-sm">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleBold}
+                >
+                  <Bold size={14} />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleItalic}
+                >
+                  <Italic size={14} />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setLinkDialogOpen(true)}
+                  className={editor.isActive("link") ? "bg-accent" : ""}
+                >
+                  <LinkIcon size={14} />
+                </Button>
+              </div>
+            )}
           </BubbleMenu>
         )}
         <EditorContent

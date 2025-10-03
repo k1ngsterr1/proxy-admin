@@ -209,6 +209,35 @@ export default function Sidebar() {
                 </Link>
               )}
             </li>
+            <li>
+              {collapsed ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link
+                      href="/admin/articles/tags"
+                      className={`sidebar-link ${
+                        isActive("/admin/articles/tags") ? "active" : ""
+                      }`}
+                    >
+                      <Tag size={20} />
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    <p>Теги статей</p>
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
+                <Link
+                  href="/admin/articles/tags"
+                  className={`sidebar-link ${
+                    isActive("/admin/articles/tags") ? "active" : ""
+                  }`}
+                >
+                  <Tag size={20} />
+                  <span>Теги статей</span>
+                </Link>
+              )}
+            </li>
           </TooltipProvider>
         </ul>
       </nav>

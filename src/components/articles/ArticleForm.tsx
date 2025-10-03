@@ -13,13 +13,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import ArticleEditor from "./Editor";
+import MainImageUpload from "./MainImageUpload";
+import TagManager from "./TagManager";
 import {
   articlesApi,
   Article,
   CreateArticleDto,
   UpdateArticleDto,
+  Tag,
 } from "@/lib/api/articles";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 
 interface ArticleFormProps {
   article?: Article;
@@ -44,6 +47,22 @@ export default function ArticleForm({
   const [images, setImages] = useState<string[]>(article?.images || []);
   const [imageFile, setImageFile] = useState<File | null>(null);
 
+  // Новые поля для главного изображения и тегов
+  const [mainImage, setMainImage] = useState<File | null>(null);
+  const [mainImageUrl, setMainImageUrl] = useState(article?.mainImageUrl || "");
+  const [mainImagePreview, setMainImagePreview] = useState<string | null>(
+    article?.mainImageUrl || null
+  );
+  const [tags, setTags] = useState<string[]>(
+    article?.tags?.map((tag) => tag.name) || []
+  );
+
+  // Получаем все доступные теги
+  const { data: allTags } = useQuery({
+    queryKey: ["tags"],
+    queryFn: articlesApi.getAllTags,
+  });
+
   // Функция удалена - больше не манипулируем структурой контента
 
   // Функция для преобразования URL в File
@@ -66,6 +85,9 @@ export default function ArticleForm({
       setTitle(article.title || "");
       setImages(article.images || []);
       setArticleLang(article.lang || "ru");
+      setMainImageUrl(article.mainImageUrl || "");
+      setMainImagePreview(article.mainImageUrl || null);
+      setTags(article.tags?.map((tag) => tag.name) || []);
 
       // Просто используем контент как есть, без манипуляций
       const articleContent = article.content || "";
@@ -89,6 +111,10 @@ export default function ArticleForm({
       setContent("");
       setImages([]);
       setArticleLang(lang);
+      setMainImage(null);
+      setMainImageUrl("");
+      setMainImagePreview(null);
+      setTags([]);
     }
   }, [article, isEditing, lang]);
 
@@ -119,6 +145,28 @@ export default function ArticleForm({
     if (e.target.files && e.target.files.length > 0) {
       setImageFile(e.target.files[0]);
     }
+  };
+
+  // Обработчик для главного изображения
+  const handleMainImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setMainImage(file);
+
+      // Создаем превью
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setMainImagePreview(event.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Удаление главного изображения
+  const removeMainImage = () => {
+    setMainImage(null);
+    setMainImageUrl("");
+    setMainImagePreview(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -175,6 +223,7 @@ export default function ArticleForm({
         title,
         content: finalContent, // Отправляем контент с изображениями как есть
         lang: articleLang,
+        tags: tags.length > 0 ? tags : undefined,
       };
 
       console.log("Article data:", {
@@ -237,13 +286,41 @@ export default function ArticleForm({
               required
             />
           </div>
+
+          <div className="space-y-2">
+            <Label>Главное изображение</Label>
+            <MainImageUpload
+              mainImageUrl={mainImageUrl}
+              onImageChange={setMainImage}
+              onUrlChange={(url) => {
+                setMainImageUrl(url);
+                setMainImagePreview(url);
+              }}
+              onRemove={removeMainImage}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Теги</Label>
+            <TagManager
+              tags={tags}
+              availableTags={allTags}
+              onTagsChange={setTags}
+            />
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="content">Содержание</Label>
             <ArticleEditor
               content={content}
               value={content}
               images={images}
+              mainImageUrl={mainImageUrl}
               onChange={setContent}
+              onMainImageChange={(url) => {
+                setMainImageUrl(url);
+                setMainImagePreview(url);
+                setMainImage(null); // Очищаем файл, так как теперь используем URL
+              }}
             />
           </div>
         </CardContent>
