@@ -124,8 +124,17 @@ export default function ArticleForm({
       setTitle(article.title || "");
       setImages(article.images || []);
       setArticleLang(article.lang || "ru");
-      setMainImageUrl(article.mainImageUrl || "");
-      setMainImagePreview(article.mainImageUrl || null);
+
+      // Используем mainImage или mainImageUrl в зависимости от того, что доступно
+      const mainImageSrc = article.mainImage || article.mainImageUrl || "";
+      console.log("Setting main image from article:", {
+        mainImage: article.mainImage,
+        mainImageUrl: article.mainImageUrl,
+        finalSrc: mainImageSrc,
+      });
+      setMainImageUrl(mainImageSrc);
+      setMainImagePreview(mainImageSrc || null);
+
       setTags(article.tags?.map((tag) => tag.name) || []);
 
       // Просто используем контент как есть, без манипуляций
@@ -143,6 +152,8 @@ export default function ArticleForm({
         content: articleContent.substring(0, 100) + "...",
         lang: article.lang,
         images: article.images,
+        mainImage: article.mainImage,
+        mainImageUrl: article.mainImageUrl,
       });
     } else if (!isEditing) {
       // Сбрасываем поля для новой статьи
@@ -393,7 +404,13 @@ export default function ArticleForm({
                           id: article.id,
                           mainImage: file,
                         });
-                      setMainImageUrl(updatedArticle.mainImageUrl || "");
+                      // Обновляем URL из ответа API
+                      const newImageUrl =
+                        updatedArticle.mainImage ||
+                        updatedArticle.mainImageUrl ||
+                        "";
+                      setMainImageUrl(newImageUrl);
+                      setMainImagePreview(newImageUrl);
                       console.log(
                         "Main image saved successfully for article:",
                         article.id

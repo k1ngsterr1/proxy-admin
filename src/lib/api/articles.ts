@@ -11,6 +11,7 @@ export interface Article {
   content: string;
   images?: string[];
   mainImageUrl?: string;
+  mainImage?: string; // Добавляем поле mainImage
   tags?: Tag[];
   lang: "ru" | "en";
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +25,12 @@ export default function MainImageUpload({
     mainImageUrl || null
   );
   const [urlInput, setUrlInput] = useState(mainImageUrl || "");
+
+  // Обновляем состояние когда изменяется mainImageUrl (например, при загрузке новой статьи)
+  useEffect(() => {
+    setPreviewUrl(mainImageUrl || null);
+    setUrlInput(mainImageUrl || "");
+  }, [mainImageUrl]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
