@@ -12,12 +12,14 @@ interface TagManagerProps {
   tags: string[];
   availableTags?: Tag[];
   onTagsChange: (tags: string[]) => void;
+  isCreatingTag?: boolean;
 }
 
 export default function TagManager({
   tags,
   availableTags = [],
   onTagsChange,
+  isCreatingTag = false,
 }: TagManagerProps) {
   const [newTag, setNewTag] = useState("");
 
@@ -89,9 +91,15 @@ export default function TagManager({
             type="button"
             variant="outline"
             onClick={addTag}
-            disabled={!newTag.trim() || tags.includes(newTag.trim())}
+            disabled={
+              !newTag.trim() || tags.includes(newTag.trim()) || isCreatingTag
+            }
           >
-            <Plus size={16} />
+            {isCreatingTag ? (
+              <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+            ) : (
+              <Plus size={16} />
+            )}
           </Button>
         </div>
       </div>

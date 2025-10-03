@@ -63,6 +63,15 @@ export default function ArticleForm({
     queryFn: articlesApi.getAllTags,
   });
 
+  // Мутация для создания нового тега
+  const createTagMutation = useMutation({
+    mutationFn: (tagName: string) => articlesApi.createTag(tagName),
+    onSuccess: () => {
+      // Обновляем список тегов
+      queryClient.invalidateQueries({ queryKey: ["tags"] });
+    },
+  });
+
   // Функция удалена - больше не манипулируем структурой контента
 
   // Функция для преобразования URL в File
@@ -167,6 +176,27 @@ export default function ArticleForm({
     setMainImage(null);
     setMainImageUrl("");
     setMainImagePreview(null);
+  };
+
+  // Обработчик изменения тегов с автоматическим сохранением новых тегов
+  const handleTagsChange = async (newTags: string[]) => {
+    // Находим новые теги, которых нет в списке доступных
+    const existingTagNames = allTags?.map((tag) => tag.name) || [];
+    const newTagsToCreate = newTags.filter(
+      (tagName) => !existingTagNames.includes(tagName) && tagName.trim() !== ""
+    );
+
+    // Создаем новые теги
+    for (const tagName of newTagsToCreate) {
+      try {
+        await createTagMutation.mutateAsync(tagName.trim());
+      } catch (error) {
+        console.error(`Failed to create tag: ${tagName}`, error);
+      }
+    }
+
+    // Обновляем состояние тегов
+    setTags(newTags);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -304,7 +334,8 @@ export default function ArticleForm({
             <TagManager
               tags={tags}
               availableTags={allTags}
-              onTagsChange={setTags}
+              onTagsChange={handleTagsChange}
+              isCreatingTag={createTagMutation.isPending}
             />
           </div>
 
