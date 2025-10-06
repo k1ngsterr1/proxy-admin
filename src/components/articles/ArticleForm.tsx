@@ -297,20 +297,16 @@ export default function ArticleForm({
             const res = await fetch(src);
             const blob = await res.blob();
             const fileName = `image-${Date.now()}-${i}.${
-              (blob.type.split("/")[1] || "png")
+              blob.type.split("/")[1] || "png"
             }`;
             const file = new File([blob], fileName, { type: blob.type });
 
             // Загружаем файл на сервер через тот же эндпоинт, что и в редакторе
             const fd = new FormData();
             fd.append("image", file);
-            const uploadResp = await axios.post(
-              "/articles/upload-image",
-              fd,
-              {
-                headers: { "Content-Type": "multipart/form-data" },
-              }
-            );
+            const uploadResp = await axios.post("/articles/upload-image", fd, {
+              headers: { "Content-Type": "multipart/form-data" },
+            });
 
             const imageUrl = uploadResp.data?.imageUrl || uploadResp.data?.url;
             if (imageUrl) {
@@ -318,7 +314,10 @@ export default function ArticleForm({
               img.src = imageUrl;
               console.log(`Replaced data image ${i + 1} with`, imageUrl);
             } else {
-              console.warn("Upload response missing image URL:", uploadResp.data);
+              console.warn(
+                "Upload response missing image URL:",
+                uploadResp.data
+              );
             }
           } catch (err) {
             console.error("Error uploading inline image:", err);
