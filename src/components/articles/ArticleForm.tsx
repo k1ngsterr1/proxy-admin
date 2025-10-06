@@ -22,6 +22,7 @@ import {
   UpdateArticleDto,
   Tag,
 } from "@/lib/api/articles";
+import axios from "@/lib/axios";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 
 interface ArticleFormProps {
@@ -278,44 +279,60 @@ export default function ArticleForm({
 
       console.log("Submitting article with language:", articleLang);
 
-      // Получаем финальный контент как есть
-      let finalContent = content;
-      let newImageFiles: File[] = [];
-
-      // Ищем data URLs в контенте и заменяем их на сервер-файлы
+      // Получаем финальный контент и загружаем inline (data:) изображения перед отправкой
       const tempDiv = document.createElement("div");
       tempDiv.innerHTML = content;
-      const imgElements = tempDiv.querySelectorAll("img");
+      const imgElements = Array.from(tempDiv.querySelectorAll("img"));
 
       console.log("Processing images in content:", imgElements.length);
 
-      // Обрабатываем каждое изображение
+      // Проходим по изображениям в порядке появления и загружаем data: URL'ы
       for (let i = 0; i < imgElements.length; i++) {
-        const img = imgElements[i];
+        const img = imgElements[i] as HTMLImageElement;
         const src = img.src;
 
         if (src.startsWith("data:image")) {
           try {
-            // Конвертируем data URL в файл
+            // Конвертируем data URL в blob
             const res = await fetch(src);
             const blob = await res.blob();
             const fileName = `image-${Date.now()}-${i}.${
-              blob.type.split("/")[1] || "png"
+              (blob.type.split("/")[1] || "png")
             }`;
             const file = new File([blob], fileName, { type: blob.type });
 
-            newImageFiles.push(file);
-            console.log(`Found new image ${i + 1} to upload:`, fileName);
+            // Загружаем файл на сервер через тот же эндпоинт, что и в редакторе
+            const fd = new FormData();
+            fd.append("image", file);
+            const uploadResp = await axios.post(
+              "/articles/upload-image",
+              fd,
+              {
+                headers: { "Content-Type": "multipart/form-data" },
+              }
+            );
+
+            const imageUrl = uploadResp.data?.imageUrl || uploadResp.data?.url;
+            if (imageUrl) {
+              // Заменяем src в DOM на URL, сохраняя порядок и расположение
+              img.src = imageUrl;
+              console.log(`Replaced data image ${i + 1} with`, imageUrl);
+            } else {
+              console.warn("Upload response missing image URL:", uploadResp.data);
+            }
           } catch (err) {
-            console.error("Error converting data URL to file:", err);
+            console.error("Error uploading inline image:", err);
           }
         }
       }
 
+      // Финальное содержимое с внешними URL для изображений
+      const finalContent = tempDiv.innerHTML;
+
       // Создаем данные статьи
       const articleData: CreateArticleDto | UpdateArticleDto = {
         title,
-        content: finalContent, // Отправляем контент с изображениями как есть
+        content: finalContent,
         lang: articleLang,
         tags: tags.length > 0 ? tags : undefined,
       };
@@ -324,20 +341,7 @@ export default function ArticleForm({
         title: articleData.title,
         contentLength: articleData.content?.length || 0,
         lang: articleData.lang,
-        newImagesCount: newImageFiles.length,
       });
-
-      // Добавляем новые изображения если есть
-      if (newImageFiles.length > 0) {
-        // Если только одно изображение, отправляем как File
-        // Если несколько, отправляем как массив
-        articleData.images =
-          newImageFiles.length === 1 ? newImageFiles[0] : newImageFiles;
-        console.log(
-          "Adding new image files to article data:",
-          newImageFiles.length
-        );
-      }
 
       if (isEditing && article?.id) {
         updateMutation.mutate({

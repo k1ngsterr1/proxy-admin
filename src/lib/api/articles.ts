@@ -42,8 +42,7 @@ const createFormData = (
   const formData = new FormData();
 
   if (article.title) formData.append("title", article.title);
-  if (article.content)
-    formData.append("content", article.content.substring(0, 65000));
+  if (article.content) formData.append("content", article.content);
   if (article.lang) formData.append("lang", article.lang);
 
   if (article.images) {
