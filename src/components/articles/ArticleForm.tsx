@@ -103,6 +103,15 @@ export default function ArticleForm({
     },
   });
 
+  // Мутация для удаления главного изображения
+  const removeMainImageMutation = useMutation({
+    mutationFn: (id: string) => articlesApi.removeMainImage(id),
+    onSuccess: (updatedArticle) => {
+      queryClient.invalidateQueries({ queryKey: ["articles"] });
+      queryClient.setQueryData(["article", updatedArticle.id], updatedArticle);
+    },
+  });
+
   // Функция удалена - больше не манипулируем структурой контента
 
   // Функция для преобразования URL в File
@@ -132,9 +141,15 @@ export default function ArticleForm({
         mainImage: article.mainImage,
         mainImageUrl: article.mainImageUrl,
         finalSrc: mainImageSrc,
+        isEmpty: !mainImageSrc,
       });
       setMainImageUrl(mainImageSrc);
       setMainImagePreview(mainImageSrc || null);
+
+      // Очищаем файл если загружаем статью с URL изображения
+      if (mainImageSrc && !mainImage) {
+        setMainImage(null);
+      }
 
       setTags(article.tags?.map((tag) => tag.name) || []);
 
@@ -222,10 +237,20 @@ export default function ArticleForm({
   };
 
   // Удаление главного изображения
-  const removeMainImage = () => {
+  const removeMainImage = async () => {
     setMainImage(null);
     setMainImageUrl("");
     setMainImagePreview(null);
+
+    // Если статья уже существует, сразу удаляем главное изображение на сервере
+    if (isEditing && article?.id) {
+      try {
+        await removeMainImageMutation.mutateAsync(article.id);
+        console.log("Main image removed successfully for article:", article.id);
+      } catch (error) {
+        console.error("Failed to remove main image:", error);
+      }
+    }
   };
 
   // Обработчик изменения тегов с автоматическим сохранением новых тегов
@@ -430,7 +455,8 @@ export default function ArticleForm({
               onRemove={removeMainImage}
               isUploading={
                 setMainImageMutation.isPending ||
-                setMainImageByUrlMutation.isPending
+                setMainImageByUrlMutation.isPending ||
+                removeMainImageMutation.isPending
               }
             />
           </div>

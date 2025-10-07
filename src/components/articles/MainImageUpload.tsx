@@ -52,6 +52,9 @@ export default function MainImageUpload({
     if (url) {
       setPreviewUrl(url);
       onImageChange(null); // Очищаем файл при вводе URL
+    } else {
+      // Если URL пустой, очищаем превью
+      setPreviewUrl(null);
     }
   };
 
@@ -71,7 +74,7 @@ export default function MainImageUpload({
 
   return (
     <div className="space-y-4">
-      {previewUrl && (
+      {previewUrl ? (
         <div className="relative">
           <img
             src={previewUrl}
@@ -87,6 +90,14 @@ export default function MainImageUpload({
           >
             <Trash2 size={16} />
           </Button>
+        </div>
+      ) : (
+        <div className="w-full max-w-md h-48 bg-gray-100 border border-dashed border-gray-300 rounded-md flex items-center justify-center">
+          <div className="text-center text-gray-500">
+            <Upload size={48} className="mx-auto mb-2" />
+            <p className="text-sm">Изображение не загружено</p>
+            <p className="text-xs">Загрузите файл или укажите URL</p>
+          </div>
         </div>
       )}
 
