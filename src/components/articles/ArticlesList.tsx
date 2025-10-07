@@ -145,9 +145,9 @@ export default function ArticlesList() {
                       {index + 1}
                     </TableCell>
                     <TableCell>
-                      {article.mainImageUrl ? (
+                      {article.mainImage || article.mainImageUrl ? (
                         <img
-                          src={article.mainImageUrl}
+                          src={article.mainImage || article.mainImageUrl}
                           alt="Главное изображение"
                           className="w-16 h-12 object-cover rounded border"
                         />
