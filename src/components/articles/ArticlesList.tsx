@@ -51,6 +51,16 @@ export default function ArticlesList() {
   const totalPages = data?.totalPages || 0;
   const total = data?.total || 0;
 
+  // Логирование для отладки
+  console.log("Articles data:", {
+    data,
+    articles,
+    totalPages,
+    total,
+    isLoading,
+    error,
+  });
+
   const deleteMutation = useMutation({
     mutationFn: articlesApi.delete,
     onSuccess: () => {

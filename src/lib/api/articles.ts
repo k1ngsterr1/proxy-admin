@@ -89,10 +89,28 @@ export const articlesApi = {
     page: number = 1,
     limit: number = 10
   ): Promise<PaginatedResponse<Article>> => {
-    const { data } = await apiClient.get<PaginatedResponse<Article>>(
-      `/articles?lang=${lang}&page=${page}&limit=${limit}`
-    );
-    return data;
+    try {
+      const { data } = await apiClient.get<
+        PaginatedResponse<Article> | Article[]
+      >(`/articles?lang=${lang}&page=${page}&limit=${limit}`);
+
+      // Если API возвращает массив (старый формат), преобразуем в пагинированный формат
+      if (Array.isArray(data)) {
+        return {
+          data: data,
+          total: data.length,
+          page: 1,
+          limit: data.length,
+          totalPages: 1,
+        };
+      }
+
+      // Если API возвращает объект с пагинацией
+      return data;
+    } catch (error) {
+      console.error("Error fetching paginated articles:", error);
+      throw error;
+    }
   },
 
   getById: async (id: string): Promise<Article> => {
