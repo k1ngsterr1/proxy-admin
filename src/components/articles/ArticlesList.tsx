@@ -12,7 +12,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Edit, Trash2, Tag } from "lucide-react";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Tag,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -32,15 +39,17 @@ export default function ArticlesList() {
   const router = useRouter();
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [lang, setLang] = useState<"ru" | "en">("ru");
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
 
-  const {
-    data: articles = [],
-    isLoading,
-    error,
-  } = useQuery({
-    queryKey: ["articles", lang],
-    queryFn: () => articlesApi.getAll(lang),
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["articles", lang, page, limit],
+    queryFn: () => articlesApi.getAllPaginated(lang, page, limit),
   });
+
+  const articles = data?.data || [];
+  const totalPages = data?.totalPages || 0;
+  const total = data?.total || 0;
 
   const deleteMutation = useMutation({
     mutationFn: articlesApi.delete,
@@ -49,6 +58,11 @@ export default function ArticlesList() {
       setDeleteId(null);
     },
   });
+
+  const handleLangChange = (newLang: "ru" | "en") => {
+    setLang(newLang);
+    setPage(1); // Сбрасываем на первую страницу при смене языка
+  };
 
   const handleDelete = (id: string) => {
     deleteMutation.mutate(id);
@@ -63,14 +77,14 @@ export default function ArticlesList() {
             <Button
               size="sm"
               variant={lang === "ru" ? "default" : "outline"}
-              onClick={() => setLang("ru")}
+              onClick={() => handleLangChange("ru")}
             >
               🇷🇺 Рус
             </Button>
             <Button
               size="sm"
               variant={lang === "en" ? "default" : "outline"}
-              onClick={() => setLang("en")}
+              onClick={() => handleLangChange("en")}
             >
               🇺🇸 Eng
             </Button>
@@ -234,6 +248,61 @@ export default function ArticlesList() {
               )}
             </TableBody>
           </Table>
+        )}
+
+        {/* Пагинация */}
+        {!isLoading && !error && totalPages > 1 && (
+          <div className="flex items-center justify-between mt-4 pt-4 border-t">
+            <div className="text-sm text-muted-foreground">
+              Показано {articles.length} из {total} статей (страница {page} из{" "}
+              {totalPages})
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                <ChevronLeft size={16} className="mr-1" />
+                Назад
+              </Button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (page <= 3) {
+                    pageNum = i + 1;
+                  } else if (page >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = page - 2 + i;
+                  }
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={page === pageNum ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setPage(pageNum)}
+                      className="w-9"
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+              >
+                Вперед
+                <ChevronRight size={16} className="ml-1" />
+              </Button>
+            </div>
+          </div>
         )}
       </CardContent>
     </Card>

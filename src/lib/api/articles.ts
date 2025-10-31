@@ -16,6 +16,14 @@ export interface Article {
   lang: "ru" | "en";
 }
 
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 export interface CreateArticleDto {
   title: string;
   content: string;
@@ -73,6 +81,17 @@ const createFormData = (
 export const articlesApi = {
   getAll: async (lang: "ru" | "en"): Promise<Article[]> => {
     const { data } = await apiClient.get<Article[]>(`/articles?lang=${lang}`);
+    return data;
+  },
+
+  getAllPaginated: async (
+    lang: "ru" | "en",
+    page: number = 1,
+    limit: number = 10
+  ): Promise<PaginatedResponse<Article>> => {
+    const { data } = await apiClient.get<PaginatedResponse<Article>>(
+      `/articles?lang=${lang}&page=${page}&limit=${limit}`
+    );
     return data;
   },
 
