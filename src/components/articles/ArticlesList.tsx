@@ -30,6 +30,13 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { articlesApi } from "@/lib/api/articles";
 import { useRouter } from "next/navigation";
@@ -40,7 +47,7 @@ export default function ArticlesList() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [lang, setLang] = useState<"ru" | "en">("ru");
   const [page, setPage] = useState(1);
-  const [limit] = useState(10);
+  const [limit, setLimit] = useState(10);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["articles", lang, page, limit],
@@ -72,6 +79,11 @@ export default function ArticlesList() {
   const handleLangChange = (newLang: "ru" | "en") => {
     setLang(newLang);
     setPage(1); // Сбрасываем на первую страницу при смене языка
+  };
+
+  const handleLimitChange = (newLimit: number) => {
+    setLimit(newLimit);
+    setPage(1); // Сбрасываем на первую страницу при изменении лимита
   };
 
   const handleDelete = (id: string) => {
@@ -261,57 +273,131 @@ export default function ArticlesList() {
         )}
 
         {/* Пагинация */}
-        {!isLoading && !error && totalPages > 1 && (
-          <div className="flex items-center justify-between mt-4 pt-4 border-t">
-            <div className="text-sm text-muted-foreground">
-              Показано {articles.length} из {total} статей (страница {page} из{" "}
-              {totalPages})
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-              >
-                <ChevronLeft size={16} className="mr-1" />
-                Назад
-              </Button>
-              <div className="flex items-center gap-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (page <= 3) {
-                    pageNum = i + 1;
-                  } else if (page >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = page - 2 + i;
-                  }
-                  return (
-                    <Button
-                      key={pageNum}
-                      variant={page === pageNum ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setPage(pageNum)}
-                      className="w-9"
-                    >
-                      {pageNum}
-                    </Button>
-                  );
-                })}
+        {!isLoading && !error && (articles.length > 0 || totalPages > 0) && (
+          <div className="flex flex-col gap-4 mt-4 pt-4 border-t">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="text-sm text-muted-foreground">
+                  Показано {(page - 1) * limit + 1}-
+                  {Math.min(page * limit, total)} из {total} статей
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    На странице:
+                  </span>
+                  <Select
+                    value={limit.toString()}
+                    onValueChange={(value) => handleLimitChange(Number(value))}
+                  >
+                    <SelectTrigger className="w-[100px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="5">5</SelectItem>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="20">20</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-              >
-                Вперед
-                <ChevronRight size={16} className="ml-1" />
-              </Button>
             </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(1)}
+                  disabled={page === 1}
+                >
+                  Первая
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  <ChevronLeft size={16} />
+                </Button>
+
+                <div className="flex items-center gap-1">
+                  {(() => {
+                    const pages = [];
+                    const showPages = 7; // Количество видимых номеров страниц
+
+                    if (totalPages <= showPages) {
+                      // Показываем все страницы
+                      for (let i = 1; i <= totalPages; i++) {
+                        pages.push(i);
+                      }
+                    } else {
+                      // Показываем с многоточием
+                      if (page <= 4) {
+                        for (let i = 1; i <= 5; i++) pages.push(i);
+                        pages.push(-1); // многоточие
+                        pages.push(totalPages);
+                      } else if (page >= totalPages - 3) {
+                        pages.push(1);
+                        pages.push(-1);
+                        for (let i = totalPages - 4; i <= totalPages; i++)
+                          pages.push(i);
+                      } else {
+                        pages.push(1);
+                        pages.push(-1);
+                        for (let i = page - 1; i <= page + 1; i++)
+                          pages.push(i);
+                        pages.push(-2);
+                        pages.push(totalPages);
+                      }
+                    }
+
+                    return pages.map((pageNum, idx) => {
+                      if (pageNum === -1 || pageNum === -2) {
+                        return (
+                          <span
+                            key={`ellipsis-${idx}`}
+                            className="px-2 text-muted-foreground"
+                          >
+                            ...
+                          </span>
+                        );
+                      }
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={page === pageNum ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setPage(pageNum)}
+                          className="min-w-[36px]"
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    });
+                  })()}
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                >
+                  <ChevronRight size={16} />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(totalPages)}
+                  disabled={page === totalPages}
+                >
+                  Последняя
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </CardContent>
