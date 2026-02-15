@@ -135,8 +135,8 @@ export default function ArticleForm({
       setImages(article.images || []);
       setArticleLang(article.lang || "ru");
 
-      // Используем mainImage или mainImageUrl в зависимости от того, что доступно
-      const mainImageSrc = article.mainImage || article.mainImageUrl || "";
+      // Используем mainImage, mainImageUrl или image в зависимости от того, что доступно
+      const mainImageSrc = article.mainImage || article.mainImageUrl || article.image || "";
       console.log("Setting main image from article:", {
         mainImage: article.mainImage,
         mainImageUrl: article.mainImageUrl,
@@ -359,6 +359,7 @@ export default function ArticleForm({
         content: finalContent,
         lang: articleLang,
         tags: tags.length > 0 ? tags : undefined,
+        mainImageUrl: mainImageUrl || mainImagePreview || undefined,
       };
 
       console.log("Article data:", {

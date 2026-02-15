@@ -9,9 +9,10 @@ export interface Article {
   id: string;
   title: string;
   content: string;
+  image?: string;
   images?: string[];
   mainImageUrl?: string;
-  mainImage?: string; // Добавляем поле mainImage
+  mainImage?: string;
   tags?: Tag[];
   lang: "ru" | "en";
 }
@@ -65,7 +66,7 @@ const createFormData = (
     formData.append("mainImage", article.mainImage);
   }
   if (article.mainImageUrl) {
-    formData.append("mainImageUrl", article.mainImageUrl);
+    formData.append("image", article.mainImageUrl);
   }
 
   // Теги

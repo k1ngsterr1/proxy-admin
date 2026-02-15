@@ -30,6 +30,76 @@ export default function Orders() {
     navigator.clipboard.writeText(text);
   };
 
+  const formatProxyString = (proxy: any, type: ProxyType, protocol: "http" | "socks"): string => {
+    if (type === "resident") {
+      const ip = "185.162.130.86";
+      const login = proxy.login || "user";
+      const password = proxy.password || "pass";
+      const ports = proxy.export?.ports || 0;
+      const lines: string[] = [];
+      for (let port = 10000; port < 10000 + ports; port++) {
+        lines.push(`${ip}:${port}:${login}:${password}`);
+      }
+      return lines.join("\n");
+    } else {
+      const login = proxy.login || "user";
+      const password = proxy.password || "pass";
+      const port = protocol === "socks" ? proxy.port_socks : proxy.port_http;
+      const ipWithPort = proxy.ip + (port ? `:${port}` : "");
+      return `${ipWithPort}:${login}:${password}`;
+    }
+  };
+
+  const copyProxiesToClipboard = (
+    proxies: any[],
+    type: ProxyType,
+    protocol: "http" | "socks"
+  ) => {
+    if (!proxies || proxies.length === 0) return;
+
+    let lines: string[] = [];
+
+    proxies.forEach((proxy, index) => {
+      if (type === "resident" && Array.isArray(proxy.package_list)) {
+        if (index > 0) return;
+        proxy.package_list.forEach((item: any) => {
+          lines.push(formatProxyString(item, type, protocol));
+        });
+      } else {
+        lines.push(formatProxyString(proxy, type, protocol));
+      }
+    });
+
+    copyToClipboard(lines.join("\n"));
+  };
+
+  const exportResidentListToTxt = (pkg: any, protocol: "http" | "socks") => {
+    const ip = "185.162.130.86";
+    const login = pkg.login || "user";
+    const password = pkg.password || "pass";
+    const ports = pkg.export?.ports || 0;
+
+    let contentFirstFormat = "";
+    let contentSecondFormat = "";
+
+    for (let port = 10000; port < 10000 + ports; port++) {
+      contentFirstFormat += `${ip}:${port}:${login}:${password}\n`;
+      contentSecondFormat += `${protocol}://${login}:${password}@${ip}:${port}\n`;
+    }
+
+    const finalContent = `${contentFirstFormat}\n${contentSecondFormat}`;
+    const blob = new Blob([finalContent], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const date = new Date().toISOString().split("T")[0];
+    const title = (pkg.title || "resident").replace(/\s+/g, "-");
+
+    a.href = url;
+    a.download = `proxy-${protocol}-${title}-${date}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const exportProxiesToTxt = (
     proxies: any[],
     type: ProxyType,
@@ -59,14 +129,9 @@ export default function Orders() {
         const password = proxy.password || "pass";
         const port = protocol === "socks" ? proxy.port_socks : proxy.port_http;
 
-        if (proxy.type === "isp") {
-          const full_ip = proxy.ip + (port ? `:${port}` : "");
-          contentFirstFormat += `${full_ip}:${login}:${password}\n`;
-          contentSecondFormat += `${protocol}://${login}:${password}@${full_ip}\n`;
-        } else {
-          contentFirstFormat += `${proxy.ip}:${login}:${password}\n`;
-          contentSecondFormat += `${protocol}://${login}:${password}@${proxy.ip}\n`;
-        }
+        const ipWithPort = proxy.ip + (port ? `:${port}` : "");
+        contentFirstFormat += `${ipWithPort}:${login}:${password}\n`;
+        contentSecondFormat += `${protocol}://${login}:${password}@${ipWithPort}\n`;
       }
     });
 
@@ -140,8 +205,26 @@ export default function Orders() {
                       exportProxiesToTxt(proxies, activeTab, "socks")
                     }
                   >
-                    <Copy className="mr-2 h-4 w-4" />
+                    <FileText className="mr-2 h-4 w-4" />
                     Сохранить SOCKS
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem
+                    onClick={() =>
+                      copyProxiesToClipboard(proxies, activeTab, "http")
+                    }
+                  >
+                    <Copy className="mr-2 h-4 w-4" />
+                    Копировать HTTP(s)
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem
+                    onClick={() =>
+                      copyProxiesToClipboard(proxies, activeTab, "socks")
+                    }
+                  >
+                    <Copy className="mr-2 h-4 w-4" />
+                    Копировать SOCKS
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -158,6 +241,7 @@ export default function Orders() {
                       <th className="py-3 px-4 font-normal">Логин</th>
                       <th className="py-3 px-4 font-normal">Пароль</th>
                       <th className="py-3 px-4 font-normal">Страна</th>
+                      <th className="py-3 pl-4 font-normal w-10"></th>
                     </tr>
                   </thead>
                   {isLoading && (
@@ -217,6 +301,39 @@ export default function Orders() {
                               <td className="py-4 px-4">
                                 {pkg.geo?.country ?? "—"}
                               </td>
+                              <td className="py-4 pl-4">
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-[#333]"
+                                    onClick={() =>
+                                      copyToClipboard(formatProxyString(pkg, "resident", "http"))
+                                    }
+                                    title="Копировать"
+                                  >
+                                    <Copy className="h-3 w-3" />
+                                  </button>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <button
+                                        className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-[#333]"
+                                        title="Скачать список"
+                                      >
+                                        <Download className="h-3 w-3" />
+                                      </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent className="w-44 bg-[#0f0f0f] text-white border border-[#333] rounded-md">
+                                      <DropdownMenuItem onClick={() => exportResidentListToTxt(pkg, "http")}>
+                                        <FileText className="mr-2 h-4 w-4" />
+                                        HTTP(s)
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => exportResidentListToTxt(pkg, "socks")}>
+                                        <FileText className="mr-2 h-4 w-4" />
+                                        SOCKS
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              </td>
                             </tr>
                           )
                         )
@@ -239,7 +356,8 @@ export default function Orders() {
                       <th className="py-3 px-4 font-normal">Порт HTTP</th>
                       <th className="py-3 px-4 font-normal">Страна</th>
                       <th className="py-3 px-4 font-normal">Логин</th>
-                      <th className="py-3 pl-4 font-normal">Пароль</th>
+                      <th className="py-3 px-4 font-normal">Пароль</th>
+                      <th className="py-3 pl-4 font-normal w-10"></th>
                     </tr>
                   </thead>
 
@@ -247,7 +365,7 @@ export default function Orders() {
                     {isLoading && (
                       <tr>
                         <td
-                          colSpan={8}
+                          colSpan={9}
                           className="py-4 text-center text-[#b3b3b3]"
                         >
                           Загрузка...
@@ -258,7 +376,7 @@ export default function Orders() {
                     {!isLoading && orders?.data?.items?.length === 0 && (
                       <tr>
                         <td
-                          colSpan={8}
+                          colSpan={9}
                           className="py-4 text-center text-[#b3b3b3]"
                         >
                           Нет данных
@@ -280,16 +398,28 @@ export default function Orders() {
                           <td className="py-4 px-4">{item?.port_http}</td>
                           <td className="py-4 px-4">{item?.country}</td>
                           <td className="py-4 px-4">{item?.login}</td>
-                          <td className="py-4 pl-4">
+                          <td className="py-4 px-4">
                             <div className="flex items-center gap-2">
                               <span>{item?.password}</span>
                               <button
                                 className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-[#333]"
                                 onClick={() => copyToClipboard(item.password)}
+                                title="Копировать пароль"
                               >
                                 <Copy className="h-3 w-3" />
                               </button>
                             </div>
+                          </td>
+                          <td className="py-4 pl-4">
+                            <button
+                              className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-[#333]"
+                              onClick={() =>
+                                copyToClipboard(formatProxyString(item, "isp", "http"))
+                              }
+                              title="Копировать прокси"
+                            >
+                              <Copy className="h-3 w-3" />
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -310,14 +440,15 @@ export default function Orders() {
                       <th className="py-3 px-4 font-normal">Порт HTTP</th>
                       <th className="py-3 px-4 font-normal">Страна</th>
                       <th className="py-3 px-4 font-normal">Логин</th>
-                      <th className="py-3 pl-4 font-normal">Пароль</th>
+                      <th className="py-3 px-4 font-normal">Пароль</th>
+                      <th className="py-3 pl-4 font-normal w-10"></th>
                     </tr>
                   </thead>
 
                   {isLoading && (
                     <tbody>
                       <tr>
-                        <td colSpan={8} className="mt-8 text-center">
+                        <td colSpan={9} className="mt-8 text-center">
                           <p className="text-[#b3b3b3] text-lg mt-8 mb-4">
                             Загрузка...
                           </p>
@@ -328,7 +459,7 @@ export default function Orders() {
                   <tbody>
                     {orders?.data?.items?.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="py-4 px-4 text-center">
+                        <td colSpan={9} className="py-4 px-4 text-center">
                           <p className="text-[#b3b3b3] text-sm">Нет данных</p>
                         </td>
                       </tr>
@@ -348,7 +479,7 @@ export default function Orders() {
                               <td className="py-4 px-4">{item?.port_http}</td>
                               <td className="py-4 px-4">{item?.country}</td>
                               <td className="py-4 px-4">{item?.login}</td>
-                              <td className="py-4 pl-4">
+                              <td className="py-4 px-4">
                                 <div className="flex items-center gap-2">
                                   <span>{item.password}</span>
                                   <button
@@ -356,10 +487,22 @@ export default function Orders() {
                                     onClick={() =>
                                       copyToClipboard(item?.password)
                                     }
+                                    title="Копировать пароль"
                                   >
                                     <Copy className="h-3 w-3" />
                                   </button>
                                 </div>
+                              </td>
+                              <td className="py-4 pl-4">
+                                <button
+                                  className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-[#333]"
+                                  onClick={() =>
+                                    copyToClipboard(formatProxyString(item, "ipv6", "http"))
+                                  }
+                                  title="Копировать прокси"
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </button>
                               </td>
                             </tr>
                           )
