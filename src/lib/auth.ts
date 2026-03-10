@@ -5,8 +5,7 @@ import apiClient from './axios';
 import Cookies from 'js-cookie';
 
 interface LoginCredentials {
-  email: string;
-  password: string;
+  seedPhrase: string;
 }
 
 interface LoginResponse {
@@ -28,7 +27,7 @@ const cookieOptions = {
 export const useLogin = () => {
   return useMutation<LoginResponse, Error, LoginCredentials>({
     mutationFn: async (credentials) => {
-      const { data } = await apiClient.post<LoginResponse>('/auth/login', credentials);
+      const { data } = await apiClient.post<LoginResponse>('/auth/admin-login', credentials);
       return data;
     },
     onSuccess: (data) => {

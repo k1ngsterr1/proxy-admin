@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -14,41 +14,95 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { useLogin } from "@/lib/auth";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [words, setWords] = useState<string[]>(Array(12).fill(""));
   const [error, setError] = useState("");
   const router = useRouter();
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const loginMutation = useLogin();
   const loading = loginMutation.isPending;
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const setInputRef = useCallback(
+    (index: number) => (el: HTMLInputElement | null) => {
+      inputRefs.current[index] = el;
+    },
+    []
+  );
+
+  const handleWordChange = (index: number, value: string) => {
+    // Handle paste of full seed phrase
+    const trimmed = value.trim();
+    const pastedWords = trimmed.split(/\s+/);
+    if (pastedWords.length >= 12) {
+      const newWords = pastedWords.slice(0, 12).map((w) => w.toLowerCase());
+      setWords(newWords);
+      inputRefs.current[11]?.focus();
+      return;
+    }
+
+    // Single word input — auto-advance on space
+    if (value.endsWith(" ")) {
+      const word = value.trim().toLowerCase();
+      const newWords = [...words];
+      newWords[index] = word;
+      setWords(newWords);
+      if (index < 11) {
+        inputRefs.current[index + 1]?.focus();
+      }
+      return;
+    }
+
+    const newWords = [...words];
+    newWords[index] = value.toLowerCase();
+    setWords(newWords);
+  };
+
+  const handleKeyDown = (
+    index: number,
+    e: React.KeyboardEvent<HTMLInputElement>
+  ) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (index < 11) {
+        inputRefs.current[index + 1]?.focus();
+      } else {
+        handleLogin();
+      }
+    }
+    if (e.key === "Backspace" && words[index] === "" && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleLogin = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setError("");
 
-    if (email !== "ipv4proxy@gmail.com") {
-      setError("Доступ запрещен. Неверный email адрес.");
+    const seedPhrase = words.map((w) => w.trim()).join(" ");
+    const filledWords = words.filter((w) => w.trim() !== "");
+
+    if (filledWords.length !== 12) {
+      setError("Введите все 12 слов сид-фразы.");
       return;
     }
 
     try {
       await loginMutation.mutateAsync(
-        { email, password },
+        { seedPhrase },
         {
           onSuccess: () => {
             router.push("/admin");
           },
           onError: (error) => {
-            setError(error.message || "Неверный email или пароль");
+            setError(error.message || "Неверная сид-фраза");
           },
         }
       );
     } catch (err) {
-      setError("Произошла ошибка при входе");
+      setError("Неверная сид-фраза или ошибка сервера");
       console.error("Ошибка аутентификации:", err);
     }
   };
@@ -56,48 +110,38 @@ export default function LoginPage() {
   return (
     <div className="flex h-screen bg-background">
       <div className="flex flex-col items-center justify-center w-full">
-        <div className="w-full max-w-md px-4">
-          {/* <div className="flex justify-center mb-8">
-            <Image
-              src="/logo.png"
-              alt="Логотип"
-              width={80}
-              height={80}
-              className="mx-auto mb-4 rounded"
-            />
-          </div> */}
-
+        <div className="w-full max-w-lg px-4">
           <Card>
             <CardHeader>
               <CardTitle className="text-center">Вход в админ-панель</CardTitle>
               <CardDescription className="text-center">
-                Введите ваши данные для входа в систему
+                Введите 12-словную сид-фразу для доступа
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleLogin}>
                 <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="ipv4proxy@gmail.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Пароль</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
+                  <div className="grid grid-cols-3 gap-3">
+                    {words.map((word, index) => (
+                      <div key={index} className="relative">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono select-none">
+                          {index + 1}.
+                        </span>
+                        <Input
+                          ref={setInputRef(index)}
+                          type="text"
+                          autoComplete="off"
+                          spellCheck={false}
+                          placeholder={`Слово ${index + 1}`}
+                          value={word}
+                          onChange={(e) =>
+                            handleWordChange(index, e.target.value)
+                          }
+                          onKeyDown={(e) => handleKeyDown(index, e)}
+                          className="pl-8 font-mono text-sm"
+                        />
+                      </div>
+                    ))}
                   </div>
                   {error && (
                     <div className="text-destructive text-sm font-medium py-1">
