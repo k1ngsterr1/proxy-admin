@@ -32,7 +32,7 @@ export default function Orders() {
 
   const formatProxyString = (proxy: any, type: ProxyType, protocol: "http" | "socks"): string => {
     if (type === "resident") {
-      const ip = "185.162.130.86";
+      const ip = "204.155.30.92";
       const login = proxy.login || "user";
       const password = proxy.password || "pass";
       const ports = proxy.export?.ports || 0;
@@ -74,7 +74,7 @@ export default function Orders() {
   };
 
   const exportResidentListToTxt = (pkg: any, protocol: "http" | "socks") => {
-    const ip = "185.162.130.86";
+    const ip = "204.155.30.92";
     const login = pkg.login || "user";
     const password = pkg.password || "pass";
     const ports = pkg.export?.ports || 0;
@@ -114,7 +114,7 @@ export default function Orders() {
       if (type === "resident" && Array.isArray(proxy.package_list)) {
         if (index > 0) return;
         proxy.package_list.forEach((item: any) => {
-          const ip = "185.162.130.86";
+          const ip = "204.155.30.92";
           const login = item.login || "user";
           const password = item.password || "pass";
           const ports = item.export?.ports || 0;
@@ -273,7 +273,7 @@ export default function Orders() {
                               className="border-b border-[#333]"
                             >
                               <td className="py-4 pr-4">{pkg.title}</td>
-                              <td className="py-4 px-4">185.162.130.86</td>
+                              <td className="py-4 px-4">204.155.30.92</td>
                               <td className="py-4 px-4">SOCKS5/HTTP</td>
                               <td className="py-4 px-4">
                                 {(() => {
