@@ -16,7 +16,6 @@ import {
   Plus,
   Edit,
   Trash2,
-  Tag,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -113,12 +112,6 @@ export default function ArticlesList() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Link href="/admin/articles/tags">
-            <Button size="sm" variant="outline">
-              <Tag size={16} className="mr-2" />
-              Теги
-            </Button>
-          </Link>
           <Dialog>
             <DialogTrigger asChild>
               <Button size="sm">
