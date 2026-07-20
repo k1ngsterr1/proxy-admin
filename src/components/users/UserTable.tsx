@@ -85,7 +85,7 @@ export default function UserTable({
                 <TableRow key={user.id}>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
-                    {dayjs(user.createdAt).format("DD.MM.YYYY")}
+                    {dayjs(user.createdAt).format("DD.MM.YYYY HH:mm")}
                   </TableCell>
                   <TableCell>{user.ip}</TableCell>
                   <TableCell>

@@ -135,6 +135,11 @@ export default function LogsPage() {
       payment.method?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const sortedOrders = [...(filteredOrders ?? [])].sort(
+    (a: any, b: any) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
   if (error) {
     return (
       <AdminLayout>
@@ -176,7 +181,7 @@ export default function LogsPage() {
               {isLoading ? (
                 <LoadingState />
               ) : (
-                <OrderTable orders={filteredOrders} searchTerm={searchTerm} />
+                <OrderTable orders={sortedOrders} searchTerm={searchTerm} />
               )}
             </TabsContent>
 
