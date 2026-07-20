@@ -19,7 +19,26 @@ export const useGetLogs = (userId: string) => {
     )
 }
 
-export const getGeneralLogs = async () => {
-  const { data } = await apiClient.get('/orders/admin/general-log');
+export type GeneralLogsResponse = {
+  orders: any[];
+  payments: any[];
+  totalOrders: number;
+  totalPayments: number;
+  page: number;
+  limit: number;
+  totalOrderPages: number;
+  totalPaymentPages: number;
+};
+
+export const getGeneralLogs = async ({
+  page,
+  limit,
+}: {
+  page: number;
+  limit: number;
+}): Promise<GeneralLogsResponse> => {
+  const { data } = await apiClient.get<GeneralLogsResponse>('/orders/admin/general-log', {
+    params: { page, limit },
+  });
   return data;
 };

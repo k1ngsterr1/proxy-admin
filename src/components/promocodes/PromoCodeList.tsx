@@ -14,7 +14,6 @@ import { toast } from "sonner"
 
 export default function PromoCodeList() {
   const queryClient = useQueryClient()
-  const [deleteId, setDeleteId] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [newPromoCode, setNewPromoCode] = useState<CreatePromoCodeDto>({
     promocode: "",
@@ -45,7 +44,6 @@ export default function PromoCodeList() {
     mutationFn: promocodesApi.delete,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['promocodes'] })
-      setDeleteId(null)
       toast.success("Промокод успешно удален")
     },
     onError: (error) => {
@@ -73,11 +71,9 @@ export default function PromoCodeList() {
     createMutation.mutate(newPromoCode)
   }
 
-  const handleDeletePromoCode = (id: string) => {
-    deleteMutation.mutate(id)
+  const handleDeletePromoCode = (code: string) => {
+    deleteMutation.mutate(code)
   }
-
-  console.log(promoCodes)
 
   return (
     <Card>
@@ -164,15 +160,13 @@ export default function PromoCodeList() {
                   </TableCell>
                 </TableRow>
               ) : (
-                promoCodes.map((promoCode, index) => (
-                  <TableRow key={index}>
+                promoCodes.map((promoCode) => (
+                  <TableRow key={promoCode.code}>
                     <TableCell className="font-mono">{promoCode.code}</TableCell>
                     <TableCell>{promoCode.discount}%</TableCell>
                     <TableCell>{promoCode.limit}</TableCell>
                     <TableCell className="text-right">
-                      <Dialog onOpenChange={(open) => {
-                        if (open) setDeleteId(promoCode.id);
-                      }}>
+                      <Dialog>
                         <DialogTrigger asChild>
                           <Button
                             variant="outline"

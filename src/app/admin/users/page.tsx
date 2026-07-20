@@ -27,11 +27,14 @@ export default function UsersPage() {
   const [isUnbanDialogOpen, setIsUnbanDialogOpen] = useState(false)
   const [userToBan, setUserToBan] = useState<{ email: string, block: boolean } | null>(null)
   const [userToUnban, setUserToUnban] = useState<{ email: string, block: boolean } | null>(null)
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(100)
 
-  const { data: users = [], isLoading, error } = useQuery({
-    queryKey: ['users'],
-    queryFn: usersApi.getAll
+  const { data: usersResponse, isLoading, error } = useQuery({
+    queryKey: ['users', page, limit],
+    queryFn: () => usersApi.getAll({ page, limit })
   })
+  const users = usersResponse?.data ?? []
 
   const blockMutation = useMutation({
     mutationFn: ({ id, block }: { id: string; block: boolean }) =>
@@ -44,7 +47,10 @@ export default function UsersPage() {
         return user
       })
 
-      queryClient.setQueryData(['users'], updatedUsers)
+      queryClient.setQueryData(['users', page, limit], {
+        ...usersResponse,
+        data: updatedUsers,
+      })
     }
   })
 
@@ -59,7 +65,10 @@ export default function UsersPage() {
         return user
       })
 
-      queryClient.setQueryData(['users'], updatedUsers)
+      queryClient.setQueryData(['users', page, limit], {
+        ...usersResponse,
+        data: updatedUsers,
+      })
     }
   })
 
@@ -132,7 +141,10 @@ export default function UsersPage() {
         return user
       })
 
-      queryClient.setQueryData(['users'], updatedUsers)
+      queryClient.setQueryData(['users', page, limit], {
+        ...usersResponse,
+        data: updatedUsers,
+      })
       setIsBalanceModalOpen(false)
     }
   })
@@ -149,7 +161,7 @@ export default function UsersPage() {
         <div>
           <div className="flex flex-row gap-x-2 items-center">
             <h1 className="text-2xl font-bold">Пользователи</h1>
-            <span className="text-xl font-medium">{users.length}</span>
+            <span className="text-xl font-medium">{usersResponse?.total ?? 0}</span>
           </div>
           <p className="text-muted-foreground">Управление пользователями системы</p>
         </div>
@@ -176,6 +188,15 @@ export default function UsersPage() {
           onBalanceAdjust={handleBalanceAdjust}
           isBlocking={blockMutation.isPending}
           isUnblocking={unblockMutation.isPending}
+          page={page}
+          totalPages={usersResponse?.totalPages ?? 0}
+          total={usersResponse?.total ?? 0}
+          limit={limit}
+          onPageChange={setPage}
+          onLimitChange={(nextLimit) => {
+            setLimit(nextLimit)
+            setPage(1)
+          }}
         />
       )}
 

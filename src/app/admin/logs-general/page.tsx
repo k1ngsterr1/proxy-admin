@@ -2,8 +2,11 @@
 
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -14,144 +17,130 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import AdminLayout from "@/components/layout/AdminLayout";
-
-import { useQuery } from "@tanstack/react-query";
-import apiClient from "@/lib/axios";
-import { Input } from "@/components/ui/input";
-
-const getGeneralLogs = async () => {
-  const response = await apiClient.get("/orders/admin/general-log");
-  const data = response.data;
-  if (!Array.isArray(data.orders) || !Array.isArray(data.payments)) {
-    throw new Error('"orders" or "payments" is not an array');
-  }
-  return {
-    orders: data.orders,
-    payments: data.payments,
-  };
-};
+import { getGeneralLogs } from "@/lib/api/logs";
 
 const LoadingState = () => (
-  <div className="flex justify-center items-center py-16 text-muted-foreground gap-2">
+  <div className="flex items-center justify-center gap-2 py-16 text-muted-foreground">
     <Loader2 className="h-5 w-5 animate-spin" />
     Загрузка данных...
   </div>
 );
 
-const OrderTable = ({ orders, searchTerm }: any) => {
-  if (!orders?.length) {
-    return <div className="text-center py-8 text-muted-foreground">{searchTerm ? "Совпадений не найдено" : "Логи отсутствуют"}</div>;
+function OrderTable({ orders, searchTerm }: { orders: any[]; searchTerm: string }) {
+  if (!orders.length) {
+    return (
+      <div className="py-8 text-center text-muted-foreground">
+        {searchTerm ? "Совпадений не найдено" : "Логи отсутствуют"}
+      </div>
+    );
   }
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Email</TableHead>
-          <TableHead>Тип заказа</TableHead>
-          <TableHead>Дата</TableHead>
-          <TableHead>Сумма</TableHead>
-          <TableHead>Номер заказа</TableHead>
-          <TableHead>Цель использования</TableHead>
-          <TableHead>Статус</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {orders.map((order: any) => (
-          <TableRow key={order.id}>
-            <TableCell className="font-mono text-xs">{order?.user?.email || "N/A"}</TableCell>
-            <TableCell>{order?.type || "N/A"}</TableCell>
-            <TableCell>{new Date(order.createdAt).toLocaleString()}</TableCell>
-            <TableCell>${parseFloat(order.totalPrice || 0).toFixed(2)}</TableCell>
-            <TableCell>{order.orderId || "N/A"}</TableCell>
-            <TableCell>{order.goal || "N/A"}</TableCell>
-            <TableCell>
-              <Badge
-                className={order.status === "PAID" ? "bg-green-500/10 text-green-500" : "bg-yellow-500/10 text-yellow-500"}
-                variant="outline"
-              >
-                {order.status === "PAID" ? "Оплачен" : order.status || "N/A"}
-              </Badge>
-            </TableCell>
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Email</TableHead>
+            <TableHead>Тип заказа</TableHead>
+            <TableHead>Дата</TableHead>
+            <TableHead>Сумма</TableHead>
+            <TableHead>Номер заказа</TableHead>
+            <TableHead>Цель использования</TableHead>
+            <TableHead>Статус</TableHead>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {orders.map((order) => (
+            <TableRow key={order.id}>
+              <TableCell className="font-mono text-xs">{order.user?.email || "N/A"}</TableCell>
+              <TableCell>{order.type || "N/A"}</TableCell>
+              <TableCell>{new Date(order.createdAt).toLocaleString()}</TableCell>
+              <TableCell>${Number(order.totalPrice || 0).toFixed(2)}</TableCell>
+              <TableCell>{order.orderId || "N/A"}</TableCell>
+              <TableCell>{order.goal || "N/A"}</TableCell>
+              <TableCell>
+                <Badge
+                  className={order.status === "PAID" ? "bg-green-500/10 text-green-500" : "bg-yellow-500/10 text-yellow-500"}
+                  variant="outline"
+                >
+                  {order.status === "PAID" ? "Оплачен" : order.status || "N/A"}
+                </Badge>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
-};
+}
 
-const PaymentTable = ({ payments, searchTerm }: any) => {
-  if (!payments?.length) {
-    return <div className="text-center py-8 text-muted-foreground">{searchTerm ? "Совпадений не найдено" : "Платежи отсутствуют"}</div>;
+function PaymentTable({ payments, searchTerm }: { payments: any[]; searchTerm: string }) {
+  if (!payments.length) {
+    return (
+      <div className="py-8 text-center text-muted-foreground">
+        {searchTerm ? "Совпадений не найдено" : "Платежи отсутствуют"}
+      </div>
+    );
   }
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Email</TableHead>
-          <TableHead>Метод</TableHead>
-          <TableHead>Дата</TableHead>
-          <TableHead>Сумма</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {payments.map((payment: any) => (
-          <TableRow key={payment.id}>
-            <TableCell className="font-mono text-xs">{payment?.user?.email || "N/A"}</TableCell>
-            <TableCell>{payment.method || "N/A"}</TableCell>
-            <TableCell>{new Date(payment.createdAt).toLocaleString()}</TableCell>
-            <TableCell>${parseFloat(payment.price || 0).toFixed(2)}</TableCell>
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Email</TableHead>
+            <TableHead>Метод</TableHead>
+            <TableHead>Дата</TableHead>
+            <TableHead>Сумма</TableHead>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {payments.map((payment) => (
+            <TableRow key={payment.id}>
+              <TableCell className="font-mono text-xs">{payment.user?.email || "N/A"}</TableCell>
+              <TableCell>{payment.method || "N/A"}</TableCell>
+              <TableCell>{new Date(payment.createdAt).toLocaleString()}</TableCell>
+              <TableCell>${Number(payment.price || 0).toFixed(2)}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
-};
+}
 
 export default function LogsPage() {
   const [searchTerm, setSearchTerm] = useState("");
-
-  const {
-    data,
-    isLoading,
-    error,
-  } = useQuery({
-    queryKey: ["generalLogs"],
-    queryFn: getGeneralLogs,
+  const [activeTab, setActiveTab] = useState("orders");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(100);
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["generalLogs", page, limit],
+    queryFn: () => getGeneralLogs({ page, limit }),
     staleTime: 1000 * 60 * 5,
     retry: 2,
   });
 
-  const filteredOrders = data?.orders?.filter(
-    (order: any) =>
-      order.orderId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.user?.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  const normalizedSearch = searchTerm.toLowerCase();
+  const orders = (data?.orders ?? []).filter(
+    (order) =>
+      order.orderId?.toLowerCase().includes(normalizedSearch) ||
+      order.user?.email?.toLowerCase().includes(normalizedSearch),
   );
-
-  const filteredPayments = data?.payments?.filter(
-    (payment: any) =>
-      payment.user?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payment.method?.toLowerCase().includes(searchTerm.toLowerCase())
+  const payments = (data?.payments ?? []).filter(
+    (payment) =>
+      payment.user?.email?.toLowerCase().includes(normalizedSearch) ||
+      payment.method?.toLowerCase().includes(normalizedSearch),
   );
-
-  const sortedOrders = [...(filteredOrders ?? [])].sort(
-    (a: any, b: any) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
+  const total = activeTab === "orders" ? data?.totalOrders ?? 0 : data?.totalPayments ?? 0;
+  const totalPages = activeTab === "orders" ? data?.totalOrderPages ?? 0 : data?.totalPaymentPages ?? 0;
 
   if (error) {
     return (
       <AdminLayout>
         <Card>
-          <CardHeader>
-            <CardTitle>Ошибка загрузки логов</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-8 text-destructive">
-              {error.message}
-            </div>
-          </CardContent>
+          <CardHeader><CardTitle>Ошибка загрузки логов</CardTitle></CardHeader>
+          <CardContent><div className="py-8 text-center text-destructive">{error.message}</div></CardContent>
         </Card>
       </AdminLayout>
     );
@@ -160,39 +149,48 @@ export default function LogsPage() {
   return (
     <AdminLayout>
       <Card>
-        <CardHeader>
-          <CardTitle>Логи пользователей</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle>Логи пользователей</CardTitle></CardHeader>
         <CardContent>
           <Input
-            type="text"
+            type="search"
             placeholder="Поиск по email, номеру заказа или методу оплаты"
-            className="w-full mb-4"
+            className="mb-4 w-full"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(event) => setSearchTerm(event.target.value)}
           />
-
-          <Tabs defaultValue="orders">
+          <Tabs
+            value={activeTab}
+            onValueChange={(value) => {
+              setActiveTab(value)
+              setPage(1)
+            }}
+          >
             <TabsList className="mb-4">
               <TabsTrigger value="orders">Заказы</TabsTrigger>
               <TabsTrigger value="payments">Платежи</TabsTrigger>
             </TabsList>
             <TabsContent value="orders">
-              {isLoading ? (
-                <LoadingState />
-              ) : (
-                <OrderTable orders={sortedOrders} searchTerm={searchTerm} />
-              )}
+              {isLoading ? <LoadingState /> : <OrderTable orders={orders} searchTerm={searchTerm} />}
             </TabsContent>
-
             <TabsContent value="payments">
-              {isLoading ? (
-                <LoadingState />
-              ) : (
-                <PaymentTable payments={filteredPayments} searchTerm={searchTerm} />
-              )}
+              {isLoading ? <LoadingState /> : <PaymentTable payments={payments} searchTerm={searchTerm} />}
             </TabsContent>
           </Tabs>
+          {!isLoading && (
+            <div className="mt-4">
+              <PaginationControls
+                page={page}
+                totalPages={totalPages}
+                total={total}
+                limit={limit}
+                onPageChange={setPage}
+                onLimitChange={(nextLimit) => {
+                  setLimit(nextLimit)
+                  setPage(1)
+                }}
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
     </AdminLayout>

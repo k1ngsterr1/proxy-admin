@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Users, Tag, FileClock, DollarSign, BookOpen } from "lucide-react";
+import { AlertTriangle, Users, Tag, FileClock, DollarSign, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -89,6 +89,35 @@ export default function Sidebar() {
                 >
                   <Users size={20} />
                   <span>Пользователи</span>
+                </Link>
+              )}
+            </li>
+            <li>
+              {collapsed ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link
+                      href="/admin/error-logs"
+                      className={`sidebar-link ${
+                        isActive("/admin/error-logs") ? "active" : ""
+                      }`}
+                    >
+                      <AlertTriangle size={20} />
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    <p>Ошибки</p>
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
+                <Link
+                  href="/admin/error-logs"
+                  className={`sidebar-link ${
+                    isActive("/admin/error-logs") ? "active" : ""
+                  }`}
+                >
+                  <AlertTriangle size={20} />
+                  <span>Ошибки</span>
                 </Link>
               )}
             </li>

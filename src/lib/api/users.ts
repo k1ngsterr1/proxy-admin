@@ -2,8 +2,11 @@ import apiClient from '../axios';
 import type { User } from '@/types';
 
 export interface UserResponse {
-  users: User[];
+  data: User[];
   total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 export interface UserCreateDto {
@@ -29,8 +32,10 @@ export interface BalanceAdjustmentDto {
 }
 
 export const usersApi = {
-  getAll: async (): Promise<User[]> => {
-    const { data } = await apiClient.get<User[]>('/user/info');
+  getAll: async ({ page, limit }: { page: number; limit: number }): Promise<UserResponse> => {
+    const { data } = await apiClient.get<UserResponse>('/user/info', {
+      params: { page, limit },
+    });
     return data;
   },
 

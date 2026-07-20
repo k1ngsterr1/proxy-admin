@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import {
   Table,
   TableBody,
@@ -26,6 +27,12 @@ interface UserTableProps {
   onLogsClick: (userId: string) => void;
   isBlocking?: boolean;
   isUnblocking?: boolean;
+  page: number;
+  totalPages: number;
+  total: number;
+  limit: number;
+  onPageChange: (page: number) => void;
+  onLimitChange: (limit: number) => void;
 }
 
 export default function UserTable({
@@ -37,6 +44,12 @@ export default function UserTable({
   onLogsClick,
   isBlocking = false,
   isUnblocking = false,
+  page,
+  totalPages,
+  total,
+  limit,
+  onPageChange,
+  onLimitChange,
 }: UserTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -164,6 +177,16 @@ export default function UserTable({
               ))}
             </TableBody>
           </Table>
+        </div>
+        <div className="mt-4">
+          <PaginationControls
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            limit={limit}
+            onPageChange={onPageChange}
+            onLimitChange={onLimitChange}
+          />
         </div>
       </CardContent>
     </Card>

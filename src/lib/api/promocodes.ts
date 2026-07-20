@@ -1,11 +1,10 @@
 import apiClient from '../axios';
 
 export interface PromoCode {
-  id: string;
   code: string;
   discount: number;
   limit: number;
-  usageCount: number;
+  userId?: string | null;
 }
 
 export interface CreatePromoCodeDto {
@@ -26,6 +25,6 @@ export const promocodesApi = {
   },
 
   delete: async (code: string): Promise<void> => {
-    await apiClient.delete(`/user/promocode/delete/${code}`);
+    await apiClient.delete(`/user/promocode/delete/${encodeURIComponent(code)}`);
   }
 };
