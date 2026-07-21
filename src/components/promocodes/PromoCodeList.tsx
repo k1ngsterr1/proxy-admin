@@ -11,6 +11,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Label } from "@/components/ui/label"
 import { Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
+import axios from "axios"
+
+const getPromoCodeErrorMessage = (error: unknown, fallback: string) => {
+  if (!axios.isAxiosError(error)) {
+    return fallback
+  }
+
+  const message = error.response?.data?.message
+  if (Array.isArray(message)) {
+    return message[0] ?? fallback
+  }
+
+  return typeof message === "string" ? message : fallback
+}
 
 export default function PromoCodeList() {
   const queryClient = useQueryClient()
@@ -35,7 +49,7 @@ export default function PromoCodeList() {
       toast.success("Промокод успешно создан")
     },
     onError: (error) => {
-      toast.error("Ошибка при создании промокода")
+      toast.error(getPromoCodeErrorMessage(error, "Ошибка при создании промокода"))
       console.error(error)
     }
   })
@@ -47,13 +61,15 @@ export default function PromoCodeList() {
       toast.success("Промокод успешно удален")
     },
     onError: (error) => {
-      toast.error("Ошибка при удалении промокода")
+      toast.error(getPromoCodeErrorMessage(error, "Ошибка при удалении промокода"))
       console.error(error)
     }
   })
 
   const handleCreatePromoCode = () => {
-    if (!newPromoCode.promocode) {
+    const promocode = newPromoCode.promocode.trim().toUpperCase()
+
+    if (!promocode) {
       toast.error("Введите код промокода")
       return
     }
@@ -68,7 +84,7 @@ export default function PromoCodeList() {
       return
     }
 
-    createMutation.mutate(newPromoCode)
+    createMutation.mutate({ ...newPromoCode, promocode })
   }
 
   const handleDeletePromoCode = (code: string) => {
