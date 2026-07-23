@@ -23,6 +23,28 @@ const apiClient = axios.create({
   maxBodyLength: Infinity,
 });
 
+export const refreshSession = async () => {
+  const refreshToken = getRefreshToken();
+
+  if (!refreshToken) {
+    throw new Error("Refresh token is missing");
+  }
+
+  if (!refreshPromise) {
+    refreshPromise = axios
+      .post<AuthTokens>(`${API_BASE_URL}auth/refresh`, { refreshToken })
+      .then(({ data }) => data)
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+
+  const tokens = await refreshPromise;
+  saveTokens(tokens);
+
+  return tokens;
+};
+
 apiClient.interceptors.request.use(
   (config) => {
     const token = getAccessToken();
@@ -68,17 +90,7 @@ apiClient.interceptors.response.use(
     originalRequest._retry = true;
 
     try {
-      if (!refreshPromise) {
-        refreshPromise = axios
-          .post<AuthTokens>(`${API_BASE_URL}auth/refresh`, { refreshToken })
-          .then(({ data }) => data)
-          .finally(() => {
-            refreshPromise = null;
-          });
-      }
-
-      const tokens = await refreshPromise;
-      saveTokens(tokens);
+      const tokens = await refreshSession();
       originalRequest.headers.Authorization = `Bearer ${tokens.accessToken}`;
 
       return apiClient(originalRequest);
