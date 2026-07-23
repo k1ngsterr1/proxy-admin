@@ -1,29 +1,21 @@
-import axios from "axios";
+import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
+import {
+  AuthTokens,
+  clearTokens,
+  getAccessToken,
+  getRefreshToken,
+  saveTokens,
+} from "./token-storage";
 
-// Helper to check if code is running in browser environment
-const isBrowser = () => typeof window !== "undefined";
+interface RetryableRequestConfig extends InternalAxiosRequestConfig {
+  _retry?: boolean;
+}
 
-// Function to get token from cookies or localStorage
-const getToken = () => {
-  if (!isBrowser()) return null;
-
-  // Try to get from cookies first (for SSR compatibility)
-  if (typeof document !== "undefined") {
-    const cookies = document.cookie.split(";");
-    const tokenCookie = cookies.find((cookie) =>
-      cookie.trim().startsWith("accessToken=")
-    );
-    if (tokenCookie) {
-      return decodeURIComponent(tokenCookie.split("=")[1]);
-    }
-  }
-
-  // Fallback to localStorage
-  return localStorage.getItem("accessToken");
-};
+const API_BASE_URL = "https://api.proxy.luxe/api/v1/";
+let refreshPromise: Promise<AuthTokens> | null = null;
 
 const apiClient = axios.create({
-  baseURL: "https://api.proxy.luxe/api/v1/",
+  baseURL: API_BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },
@@ -33,7 +25,7 @@ const apiClient = axios.create({
 
 apiClient.interceptors.request.use(
   (config) => {
-    const token = getToken();
+    const token = getAccessToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -48,6 +40,57 @@ apiClient.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error);
+  }
+);
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error: AxiosError) => {
+    const originalRequest = error.config as RetryableRequestConfig | undefined;
+    const isLoginOrRefreshRequest =
+      originalRequest?.url?.includes("/auth/admin-login") ||
+      originalRequest?.url?.includes("/auth/refresh");
+
+    if (
+      error.response?.status !== 401 ||
+      !originalRequest ||
+      originalRequest._retry ||
+      isLoginOrRefreshRequest
+    ) {
+      return Promise.reject(error);
+    }
+
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) {
+      return Promise.reject(error);
+    }
+
+    originalRequest._retry = true;
+
+    try {
+      if (!refreshPromise) {
+        refreshPromise = axios
+          .post<AuthTokens>(`${API_BASE_URL}auth/refresh`, { refreshToken })
+          .then(({ data }) => data)
+          .finally(() => {
+            refreshPromise = null;
+          });
+      }
+
+      const tokens = await refreshPromise;
+      saveTokens(tokens);
+      originalRequest.headers.Authorization = `Bearer ${tokens.accessToken}`;
+
+      return apiClient(originalRequest);
+    } catch (refreshError) {
+      clearTokens();
+
+      if (typeof window !== "undefined") {
+        window.location.assign("/login");
+      }
+
+      return Promise.reject(refreshError);
+    }
   }
 );
 
