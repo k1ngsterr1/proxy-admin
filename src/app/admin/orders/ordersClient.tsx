@@ -10,11 +10,36 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Download, FileText, Copy } from "lucide-react";
+import { toast } from "sonner";
 
 import { useOrdersData } from "@/lib/orders";
 import { useSearchParams } from "next/navigation";
 
 type ProxyType = "isp" | "ipv6" | "resident";
+type ProxyProtocol = "http" | "socks";
+
+const getProxyConnection = (proxy: any, protocol: ProxyProtocol) => {
+  const ip = String(proxy.ip ?? "").trim();
+  const rawPort = protocol === "socks" ? proxy.port_socks : proxy.port_http;
+  const port = Number(rawPort);
+
+  if (!ip) {
+    throw new Error("У прокси отсутствует IP-адрес");
+  }
+
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error(
+      `У прокси ${ip} отсутствует корректный ${protocol.toUpperCase()}-порт`
+    );
+  }
+
+  return {
+    ip,
+    port,
+    login: proxy.login || "user",
+    password: proxy.password || "pass",
+  };
+};
 
 export default function Orders() {
   const [activeTab, setActiveTab] = useState<ProxyType>("resident");
@@ -30,7 +55,11 @@ export default function Orders() {
     navigator.clipboard.writeText(text);
   };
 
-  const formatProxyString = (proxy: any, type: ProxyType, protocol: "http" | "socks"): string => {
+  const formatProxyString = (
+    proxy: any,
+    type: ProxyType,
+    protocol: ProxyProtocol
+  ): string => {
     if (type === "resident") {
       const ip = "204.155.30.92";
       const login = proxy.login || "user";
@@ -42,38 +71,45 @@ export default function Orders() {
       }
       return lines.join("\n");
     } else {
-      const login = proxy.login || "user";
-      const password = proxy.password || "pass";
-      const port = protocol === "socks" ? proxy.port_socks : proxy.port_http;
-      const ipWithPort = proxy.ip + (port ? `:${port}` : "");
-      return `${ipWithPort}:${login}:${password}`;
+      const { ip, port, login, password } = getProxyConnection(
+        proxy,
+        protocol
+      );
+      return `${ip}:${port}:${login}:${password}`;
     }
   };
 
   const copyProxiesToClipboard = (
     proxies: any[],
     type: ProxyType,
-    protocol: "http" | "socks"
+    protocol: ProxyProtocol
   ) => {
     if (!proxies || proxies.length === 0) return;
 
     let lines: string[] = [];
 
-    proxies.forEach((proxy, index) => {
-      if (type === "resident" && Array.isArray(proxy.package_list)) {
-        if (index > 0) return;
-        proxy.package_list.forEach((item: any) => {
-          lines.push(formatProxyString(item, type, protocol));
-        });
-      } else {
-        lines.push(formatProxyString(proxy, type, protocol));
-      }
-    });
+    try {
+      proxies.forEach((proxy, index) => {
+        if (type === "resident" && Array.isArray(proxy.package_list)) {
+          if (index > 0) return;
+          proxy.package_list.forEach((item: any) => {
+            lines.push(formatProxyString(item, type, protocol));
+          });
+        } else {
+          lines.push(formatProxyString(proxy, type, protocol));
+        }
+      });
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Не удалось скопировать прокси"
+      );
+      return;
+    }
 
     copyToClipboard(lines.join("\n"));
   };
 
-  const exportResidentListToTxt = (pkg: any, protocol: "http" | "socks") => {
+  const exportResidentListToTxt = (pkg: any, protocol: ProxyProtocol) => {
     const ip = "204.155.30.92";
     const login = pkg.login || "user";
     const password = pkg.password || "pass";
@@ -103,37 +139,43 @@ export default function Orders() {
   const exportProxiesToTxt = (
     proxies: any[],
     type: ProxyType,
-    protocol: "http" | "socks"
+    protocol: ProxyProtocol
   ) => {
     if (!proxies || proxies.length === 0) return;
 
     let contentFirstFormat = "";
     let contentSecondFormat = "";
 
-    proxies.forEach((proxy, index) => {
-      if (type === "resident" && Array.isArray(proxy.package_list)) {
-        if (index > 0) return;
-        proxy.package_list.forEach((item: any) => {
-          const ip = "204.155.30.92";
-          const login = item.login || "user";
-          const password = item.password || "pass";
-          const ports = item.export?.ports || 0;
+    try {
+      proxies.forEach((proxy, index) => {
+        if (type === "resident" && Array.isArray(proxy.package_list)) {
+          if (index > 0) return;
+          proxy.package_list.forEach((item: any) => {
+            const ip = "204.155.30.92";
+            const login = item.login || "user";
+            const password = item.password || "pass";
+            const ports = item.export?.ports || 0;
 
-          for (let port = 10000; port < 10000 + ports; port++) {
-            contentFirstFormat += `${ip}:${port}:${login}:${password}\n`;
-            contentSecondFormat += `${protocol}://${login}:${password}@${ip}:${port}\n`;
-          }
-        });
-      } else {
-        const login = proxy.login || "user";
-        const password = proxy.password || "pass";
-        const port = protocol === "socks" ? proxy.port_socks : proxy.port_http;
-
-        const ipWithPort = proxy.ip + (port ? `:${port}` : "");
-        contentFirstFormat += `${ipWithPort}:${login}:${password}\n`;
-        contentSecondFormat += `${protocol}://${login}:${password}@${ipWithPort}\n`;
-      }
-    });
+            for (let port = 10000; port < 10000 + ports; port++) {
+              contentFirstFormat += `${ip}:${port}:${login}:${password}\n`;
+              contentSecondFormat += `${protocol}://${login}:${password}@${ip}:${port}\n`;
+            }
+          });
+        } else {
+          const { ip, port, login, password } = getProxyConnection(
+            proxy,
+            protocol
+          );
+          contentFirstFormat += `${ip}:${port}:${login}:${password}\n`;
+          contentSecondFormat += `${protocol}://${login}:${password}@${ip}:${port}\n`;
+        }
+      });
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Не удалось выгрузить прокси"
+      );
+      return;
+    }
 
     const finalContent = `${contentFirstFormat}\n${contentSecondFormat}`;
     const blob = new Blob([finalContent], { type: "text/plain" });
