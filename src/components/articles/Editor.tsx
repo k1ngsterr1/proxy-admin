@@ -30,6 +30,7 @@ import { Label } from "@/components/ui/label";
 
 // Tiptap imports
 import { useEditor, EditorContent, BubbleMenu } from "@tiptap/react";
+import { TextSelection } from "@tiptap/pm/state";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
@@ -40,6 +41,13 @@ import axios from "@/lib/axios";
 
 // Add custom CSS for the editor
 import "./editor.css";
+
+interface SavedLinkSelection {
+  from: number;
+  to: number;
+  isLink: boolean;
+  text: string;
+}
 
 interface ArticleEditorProps {
   content: string;
@@ -67,6 +75,8 @@ export default function ArticleEditor({
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
   const [linkText, setLinkText] = useState("");
+  const [linkError, setLinkError] = useState("");
+  const linkSelectionRef = useRef<SavedLinkSelection | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Инициализация редактора Tiptap
@@ -96,7 +106,7 @@ export default function ArticleEditor({
         },
       }),
       Link.configure({
-        openOnClick: true,
+        openOnClick: false,
         HTMLAttributes: {
           rel: "noopener noreferrer",
           class: "text-blue-500 underline",
@@ -112,6 +122,7 @@ export default function ArticleEditor({
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
     },
+    immediatelyRender: false,
     editorProps: {
       attributes: {
         class:
@@ -130,6 +141,18 @@ export default function ArticleEditor({
           // Улучшенное позиционирование курсора при клике
           const target = event.target as HTMLElement;
 
+          const link = target.closest("a");
+          if (link && view.dom.contains(link)) {
+            event.preventDefault();
+
+            const from = view.posAtDOM(link, 0);
+            const to = view.posAtDOM(link, link.childNodes.length);
+            const selection = TextSelection.create(view.state.doc, from, to);
+
+            view.dispatch(view.state.tr.setSelection(selection));
+            return true;
+          }
+
           // Если кликнули на изображение
           if (target.tagName === "IMG") {
             event.preventDefault();
@@ -142,8 +165,6 @@ export default function ArticleEditor({
               const after = Math.min($pos.after(), view.state.doc.content.size);
 
               if (after > 0 && after <= view.state.doc.content.size) {
-                // Импортируем TextSelection из prosemirror-state
-                const { TextSelection } = require("prosemirror-state");
                 const selection = TextSelection.near(
                   view.state.doc.resolve(after)
                 );
@@ -275,38 +296,137 @@ export default function ArticleEditor({
     }
   };
 
-  // Функция для добавления ссылки
-  const insertLink = () => {
-    if (editor && linkUrl) {
-      // Если текст ссылки не указан, используем URL
-      const text = linkText || linkUrl;
+  const closeLinkDialog = () => {
+    setLinkDialogOpen(false);
+    setLinkUrl("");
+    setLinkText("");
+    setLinkError("");
+    linkSelectionRef.current = null;
+  };
 
-      // Если есть выделенный текст, делаем его ссылкой
-      if (editor.state.selection.empty && text) {
-        // Вставляем новый текст как ссылку
-        editor
-          .chain()
-          .focus()
-          .insertContent(`<a href="${linkUrl}" target="_blank">${text}</a>`)
+  const openLinkDialog = () => {
+    if (!editor) return;
+
+    const isLink = editor.isActive("link");
+    if (isLink && editor.state.selection.empty) {
+      editor.chain().extendMarkRange("link").run();
+    }
+
+    const { from, to } = editor.state.selection;
+    const text = editor.state.doc.textBetween(from, to, " ");
+
+    linkSelectionRef.current = { from, to, isLink, text };
+    setLinkUrl(isLink ? editor.getAttributes("link").href || "" : "");
+    setLinkText(text);
+    setLinkError("");
+    setLinkDialogOpen(true);
+  };
+
+  const normalizeLinkUrl = (value: string) => {
+    const trimmedUrl = value.trim();
+
+    if (/^(\/(?!\/)|#)/.test(trimmedUrl)) {
+      return trimmedUrl;
+    }
+
+    if (/^(mailto:|tel:)/i.test(trimmedUrl)) {
+      return trimmedUrl;
+    }
+
+    const normalizedUrl = /^[a-z][a-z\d+.-]*:/i.test(trimmedUrl)
+      ? trimmedUrl
+      : `https://${trimmedUrl}`;
+
+    try {
+      const parsedUrl = new URL(normalizedUrl);
+      return ["http:", "https:"].includes(parsedUrl.protocol)
+        ? parsedUrl.toString()
+        : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const insertLink = () => {
+    if (!editor || !linkSelectionRef.current) return;
+
+    const href = normalizeLinkUrl(linkUrl);
+    if (!href) {
+      setLinkError("Введите корректный URL");
+      return;
+    }
+
+    const savedSelection = linkSelectionRef.current;
+    const text = linkText.trim() || href;
+    const chain = editor
+      .chain()
+      .focus()
+      .setTextSelection({
+        from: savedSelection.from,
+        to: savedSelection.to,
+      });
+
+    if (savedSelection.isLink && savedSelection.from === savedSelection.to) {
+      chain
+        .extendMarkRange("link")
+        .setLink({ href, target: "_blank" })
+        .run();
+    } else if (savedSelection.from !== savedSelection.to) {
+      if (linkText.trim() && linkText !== savedSelection.text) {
+        chain
+          .deleteSelection()
+          .insertContent({
+            type: "text",
+            text,
+            marks: [
+              {
+                type: "link",
+                attrs: { href, target: "_blank" },
+              },
+            ],
+          })
           .run();
       } else {
-        // Делаем выделенный текст ссылкой
-        editor
-          .chain()
-          .focus()
-          .setLink({ href: linkUrl, target: "_blank" })
-          .run();
+        chain.setLink({ href, target: "_blank" }).run();
       }
-
-      // Обновляем содержимое
-      const html = editor.getHTML();
-      onChange(html);
-
-      // Закрываем диалог и сбрасываем поля
-      setLinkDialogOpen(false);
-      setLinkUrl("");
-      setLinkText("");
+    } else {
+      chain
+        .insertContent({
+          type: "text",
+          text,
+          marks: [
+            {
+              type: "link",
+              attrs: { href, target: "_blank" },
+            },
+          ],
+        })
+        .run();
     }
+
+    onChange(editor.getHTML());
+    closeLinkDialog();
+  };
+
+  const removeLink = () => {
+    if (!editor || !linkSelectionRef.current) return;
+
+    const savedSelection = linkSelectionRef.current;
+    const chain = editor
+      .chain()
+      .focus()
+      .setTextSelection({
+        from: savedSelection.from,
+        to: savedSelection.to,
+      });
+
+    if (savedSelection.from === savedSelection.to) {
+      chain.extendMarkRange("link");
+    }
+
+    chain.unsetLink().run();
+    onChange(editor.getHTML());
+    closeLinkDialog();
   };
 
   // Функции для управления форматированием
@@ -326,8 +446,6 @@ export default function ArticleEditor({
   const toggleCodeBlock = () => editor?.chain().focus().toggleCodeBlock().run();
   const undo = () => editor?.chain().focus().undo().run();
   const redo = () => editor?.chain().focus().redo().run();
-  const unsetLink = () => editor?.chain().focus().unsetLink().run();
-
   // Функция для установки изображения как главное
   const setAsMainImage = (imageUrl: string) => {
     if (onMainImageChange) {
@@ -478,21 +596,33 @@ export default function ArticleEditor({
         </Dialog>
 
         {/* Кнопка для добавления ссылки */}
-        <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
-          <DialogTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              title="Добавить ссылку"
-              className={editor?.isActive("link") ? "bg-accent" : ""}
-            >
-              <LinkIcon size={16} />
-            </Button>
-          </DialogTrigger>
+        <Dialog
+          open={linkDialogOpen}
+          onOpenChange={(open) => {
+            if (!open) closeLinkDialog();
+          }}
+        >
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            title={
+              editor?.isActive("link")
+                ? "Изменить ссылку"
+                : "Добавить ссылку"
+            }
+            className={editor?.isActive("link") ? "bg-accent" : ""}
+            onClick={openLinkDialog}
+          >
+            <LinkIcon size={16} />
+          </Button>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Добавить ссылку</DialogTitle>
+              <DialogTitle>
+                {linkSelectionRef.current?.isLink
+                  ? "Изменить ссылку"
+                  : "Добавить ссылку"}
+              </DialogTitle>
             </DialogHeader>
             <div className="flex flex-col gap-4">
               <div className="grid gap-2">
@@ -502,8 +632,15 @@ export default function ArticleEditor({
                   type="url"
                   placeholder="https://example.com"
                   value={linkUrl}
-                  onChange={(e) => setLinkUrl(e.target.value)}
+                  onChange={(e) => {
+                    setLinkUrl(e.target.value);
+                    setLinkError("");
+                  }}
+                  aria-invalid={Boolean(linkError)}
                 />
+                {linkError && (
+                  <p className="text-sm text-destructive">{linkError}</p>
+                )}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="text">Текст ссылки (опционально)</Label>
@@ -522,16 +659,15 @@ export default function ArticleEditor({
                   disabled={!linkUrl}
                   className="flex-1"
                 >
-                  Добавить
+                  {linkSelectionRef.current?.isLink
+                    ? "Сохранить"
+                    : "Добавить"}
                 </Button>
-                {editor?.isActive("link") && (
+                {linkSelectionRef.current?.isLink && (
                   <Button
                     type="button"
                     variant="destructive"
-                    onClick={() => {
-                      unsetLink();
-                      setLinkDialogOpen(false);
-                    }}
+                    onClick={removeLink}
                   >
                     Удалить ссылку
                   </Button>
@@ -608,7 +744,7 @@ export default function ArticleEditor({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={() => setLinkDialogOpen(true)}
+                  onClick={openLinkDialog}
                   className={editor.isActive("link") ? "bg-accent" : ""}
                 >
                   <LinkIcon size={14} />
