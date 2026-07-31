@@ -31,8 +31,10 @@ interface UserTableProps {
   totalPages: number;
   total: number;
   limit: number;
+  showAll: boolean;
   onPageChange: (page: number) => void;
   onLimitChange: (limit: number) => void;
+  onShowAll: () => void;
 }
 
 export default function UserTable({
@@ -48,8 +50,10 @@ export default function UserTable({
   totalPages,
   total,
   limit,
+  showAll,
   onPageChange,
   onLimitChange,
+  onShowAll,
 }: UserTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -184,8 +188,10 @@ export default function UserTable({
             totalPages={totalPages}
             total={total}
             limit={limit}
+            showAll={showAll}
             onPageChange={onPageChange}
             onLimitChange={onLimitChange}
+            onShowAll={onShowAll}
           />
         </div>
       </CardContent>

@@ -17,8 +17,10 @@ type PaginationControlsProps = {
   totalPages: number;
   total: number;
   limit: number;
+  showAll?: boolean;
   onPageChange: (page: number) => void;
   onLimitChange: (limit: number) => void;
+  onShowAll?: () => void;
 };
 
 export function PaginationControls({
@@ -26,8 +28,10 @@ export function PaginationControls({
   totalPages,
   total,
   limit,
+  showAll = false,
   onPageChange,
   onLimitChange,
+  onShowAll,
 }: PaginationControlsProps) {
   const displayTotalPages = Math.max(totalPages, 1);
 
@@ -36,8 +40,15 @@ export function PaginationControls({
       <span className="text-sm text-muted-foreground">Всего: {total}</span>
       <div className="flex items-center gap-2">
         <Select
-          value={String(limit)}
-          onValueChange={(value) => onLimitChange(Number(value))}
+          value={showAll ? "all" : String(limit)}
+          onValueChange={(value) => {
+            if (value === "all") {
+              onShowAll?.();
+              return;
+            }
+
+            onLimitChange(Number(value));
+          }}
         >
           <SelectTrigger className="w-[92px]" aria-label="Количество строк на странице">
             <SelectValue />
@@ -48,6 +59,7 @@ export function PaginationControls({
                 {size}
               </SelectItem>
             ))}
+            {onShowAll && <SelectItem value="all">Все</SelectItem>}
           </SelectContent>
         </Select>
         <Button
@@ -56,13 +68,13 @@ export function PaginationControls({
           size="icon"
           title="Предыдущая страница"
           aria-label="Предыдущая страница"
-          disabled={page <= 1}
+          disabled={showAll || page <= 1}
           onClick={() => onPageChange(page - 1)}
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
         <span className="min-w-[76px] text-center text-sm text-muted-foreground">
-          {page} / {displayTotalPages}
+          {showAll ? "Все" : `${page} / ${displayTotalPages}`}
         </span>
         <Button
           type="button"
@@ -70,7 +82,7 @@ export function PaginationControls({
           size="icon"
           title="Следующая страница"
           aria-label="Следующая страница"
-          disabled={page >= displayTotalPages}
+          disabled={showAll || page >= displayTotalPages}
           onClick={() => onPageChange(page + 1)}
         >
           <ChevronRight className="h-4 w-4" />

@@ -32,9 +32,9 @@ export interface BalanceAdjustmentDto {
 }
 
 export const usersApi = {
-  getAll: async ({ page, limit }: { page: number; limit: number }): Promise<UserResponse> => {
+  getAll: async ({ page, limit, all = false }: { page: number; limit: number; all?: boolean }): Promise<UserResponse> => {
     const { data } = await apiClient.get<UserResponse>('/user/info', {
-      params: { page, limit },
+      params: { page, limit, all },
     });
     return data;
   },

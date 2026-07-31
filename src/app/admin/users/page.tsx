@@ -29,10 +29,11 @@ export default function UsersPage() {
   const [userToUnban, setUserToUnban] = useState<{ email: string, block: boolean } | null>(null)
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(100)
+  const [showAll, setShowAll] = useState(false)
 
   const { data: usersResponse, isLoading, error } = useQuery({
-    queryKey: ['users', page, limit],
-    queryFn: () => usersApi.getAll({ page, limit })
+    queryKey: ['users', page, limit, showAll],
+    queryFn: () => usersApi.getAll({ page, limit, all: showAll })
   })
   const users = usersResponse?.data ?? []
 
@@ -47,7 +48,7 @@ export default function UsersPage() {
         return user
       })
 
-      queryClient.setQueryData(['users', page, limit], {
+      queryClient.setQueryData(['users', page, limit, showAll], {
         ...usersResponse,
         data: updatedUsers,
       })
@@ -65,7 +66,7 @@ export default function UsersPage() {
         return user
       })
 
-      queryClient.setQueryData(['users', page, limit], {
+      queryClient.setQueryData(['users', page, limit, showAll], {
         ...usersResponse,
         data: updatedUsers,
       })
@@ -141,7 +142,7 @@ export default function UsersPage() {
         return user
       })
 
-      queryClient.setQueryData(['users', page, limit], {
+      queryClient.setQueryData(['users', page, limit, showAll], {
         ...usersResponse,
         data: updatedUsers,
       })
@@ -192,9 +193,15 @@ export default function UsersPage() {
           totalPages={usersResponse?.totalPages ?? 0}
           total={usersResponse?.total ?? 0}
           limit={limit}
+          showAll={showAll}
           onPageChange={setPage}
           onLimitChange={(nextLimit) => {
+            setShowAll(false)
             setLimit(nextLimit)
+            setPage(1)
+          }}
+          onShowAll={() => {
+            setShowAll(true)
             setPage(1)
           }}
         />
