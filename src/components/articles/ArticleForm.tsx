@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,10 +20,10 @@ import {
   Article,
   CreateArticleDto,
   UpdateArticleDto,
-  Tag,
 } from "@/lib/api/articles";
 import axios from "@/lib/axios";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 interface ArticleFormProps {
   article?: Article;
@@ -46,7 +46,7 @@ export default function ArticleForm({
   const [title, setTitle] = useState(article?.title || "");
   const [content, setContent] = useState(article?.content || "");
   const [images, setImages] = useState<string[]>(article?.images || []);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Новые поля для главного изображения и тегов
   const [mainImage, setMainImage] = useState<File | null>(null);
@@ -83,26 +83,6 @@ export default function ArticleForm({
     },
   });
 
-  // Мутация для сохранения главного изображения по файлу
-  const setMainImageMutation = useMutation({
-    mutationFn: ({ id, mainImage }: { id: string; mainImage: File }) =>
-      articlesApi.setMainImage(id, mainImage),
-    onSuccess: (updatedArticle) => {
-      queryClient.invalidateQueries({ queryKey: ["articles"] });
-      queryClient.setQueryData(["article", updatedArticle.id], updatedArticle);
-    },
-  });
-
-  // Мутация для сохранения главного изображения по URL
-  const setMainImageByUrlMutation = useMutation({
-    mutationFn: ({ id, mainImageUrl }: { id: string; mainImageUrl: string }) =>
-      articlesApi.setMainImageByUrl(id, mainImageUrl),
-    onSuccess: (updatedArticle) => {
-      queryClient.invalidateQueries({ queryKey: ["articles"] });
-      queryClient.setQueryData(["article", updatedArticle.id], updatedArticle);
-    },
-  });
-
   // Мутация для удаления главного изображения
   const removeMainImageMutation = useMutation({
     mutationFn: (id: string) => articlesApi.removeMainImage(id),
@@ -113,17 +93,6 @@ export default function ArticleForm({
   });
 
   // Функция удалена - больше не манипулируем структурой контента
-
-  // Функция для преобразования URL в File
-  const urlToFile = async (
-    url: string,
-    filename: string,
-    mimeType: string
-  ): Promise<File> => {
-    const response = await fetch(url);
-    const blob = await response.blob();
-    return new File([blob], filename, { type: mimeType });
-  };
 
   // Обновляем данные при изменении статьи
   useEffect(() => {
@@ -206,34 +175,11 @@ export default function ArticleForm({
     },
   });
 
-  // Handle file selection
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setImageFile(e.target.files[0]);
-    }
-  };
-
   // Обработчик для главного изображения по URL
-  const handleMainImageUrlChange = async (url: string) => {
+  const handleMainImageUrlChange = (url: string) => {
     setMainImageUrl(url);
-    setMainImagePreview(url);
+    setMainImagePreview(url || null);
     setMainImage(null); // Очищаем файл, так как теперь используем URL
-
-    // Если статья уже существует, сразу сохраняем URL главного изображения
-    if (isEditing && article?.id && url.trim()) {
-      try {
-        await setMainImageByUrlMutation.mutateAsync({
-          id: article.id,
-          mainImageUrl: url,
-        });
-        console.log(
-          "Main image URL saved successfully for article:",
-          article.id
-        );
-      } catch (error) {
-        console.error("Failed to save main image URL:", error);
-      }
-    }
   };
 
   // Удаление главного изображения
@@ -291,16 +237,10 @@ export default function ArticleForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
 
     try {
-      // Show loading state
-      const submitButton = document.querySelector(
-        ".submit-button"
-      ) as HTMLButtonElement;
-      if (submitButton) {
-        submitButton.disabled = true;
-        submitButton.textContent = "Сохранение...";
-      }
+      setIsSubmitting(true);
 
       console.log("Submitting article with language:", articleLang);
 
@@ -353,13 +293,19 @@ export default function ArticleForm({
       // Финальное содержимое с внешними URL для изображений
       const finalContent = tempDiv.innerHTML;
 
+      // Превью data: нельзя отправлять как URL. Сначала загружаем файл
+      // и только затем сохраняем статью с полученным URL.
+      const uploadedMainImageUrl = mainImage
+        ? await articlesApi.uploadImage(mainImage)
+        : mainImageUrl.trim() || undefined;
+
       // Создаем данные статьи
       const articleData: CreateArticleDto | UpdateArticleDto = {
         title,
         content: finalContent,
         lang: articleLang,
         tags: tags.length > 0 ? tags : undefined,
-        mainImageUrl: mainImageUrl || mainImagePreview || undefined,
+        mainImageUrl: uploadedMainImageUrl,
       };
 
       console.log("Article data:", {
@@ -369,24 +315,20 @@ export default function ArticleForm({
       });
 
       if (isEditing && article?.id) {
-        updateMutation.mutate({
+        await updateMutation.mutateAsync({
           id: article.id,
           data: articleData,
         });
       } else {
-        createMutation.mutate(articleData as CreateArticleDto);
+        await createMutation.mutateAsync(articleData as CreateArticleDto);
       }
     } catch (error) {
       console.error("Error submitting article:", error);
+      toast.error(
+        "Не удалось сохранить статью. Проверьте обложку и повторите попытку."
+      );
     } finally {
-      // Reset button state
-      const submitButton = document.querySelector(
-        ".submit-button"
-      ) as HTMLButtonElement;
-      if (submitButton) {
-        submitButton.disabled = false;
-        submitButton.textContent = "Сохранить";
-      }
+      setIsSubmitting(false);
     }
   };
 
@@ -414,9 +356,11 @@ export default function ArticleForm({
             <Label>Главное изображение</Label>
             <MainImageUpload
               mainImageUrl={mainImageUrl}
+              previewUrl={mainImagePreview}
               onImageChange={async (file) => {
                 if (file) {
                   setMainImage(file);
+                  setMainImageUrl("");
 
                   // Создаем превью
                   const reader = new FileReader();
@@ -424,41 +368,13 @@ export default function ArticleForm({
                     setMainImagePreview(event.target?.result as string);
                   };
                   reader.readAsDataURL(file);
-
-                  // Если статья уже существует, сразу сохраняем главное изображение
-                  if (isEditing && article?.id) {
-                    try {
-                      const updatedArticle =
-                        await setMainImageMutation.mutateAsync({
-                          id: article.id,
-                          mainImage: file,
-                        });
-                      // Обновляем URL из ответа API
-                      const newImageUrl =
-                        updatedArticle.mainImage ||
-                        updatedArticle.mainImageUrl ||
-                        "";
-                      setMainImageUrl(newImageUrl);
-                      setMainImagePreview(newImageUrl);
-                      console.log(
-                        "Main image saved successfully for article:",
-                        article.id
-                      );
-                    } catch (error) {
-                      console.error("Failed to save main image:", error);
-                    }
-                  }
                 } else {
                   setMainImage(null);
                 }
               }}
               onUrlChange={handleMainImageUrlChange}
               onRemove={removeMainImage}
-              isUploading={
-                setMainImageMutation.isPending ||
-                setMainImageByUrlMutation.isPending ||
-                removeMainImageMutation.isPending
-              }
+              isUploading={isSubmitting || removeMainImageMutation.isPending}
             />
           </div>
           <div className="space-y-2">
@@ -498,10 +414,10 @@ export default function ArticleForm({
           </Button>
           <Button
             type="submit"
-            disabled={createMutation.isPending || updateMutation.isPending}
+            disabled={isSubmitting}
             className="submit-button"
           >
-            {createMutation.isPending || updateMutation.isPending
+            {isSubmitting
               ? "Сохранение..."
               : isEditing
               ? "Обновить"

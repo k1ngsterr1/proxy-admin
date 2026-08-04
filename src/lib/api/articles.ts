@@ -29,7 +29,6 @@ export interface CreateArticleDto {
   title: string;
   content: string;
   images?: File | File[];
-  mainImage?: File;
   mainImageUrl?: string;
   tags?: string[];
   lang: "ru" | "en";
@@ -39,7 +38,6 @@ export interface UpdateArticleDto {
   title?: string;
   content?: string;
   images?: File | File[];
-  mainImage?: File;
   mainImageUrl?: string;
   tags?: string[];
   lang?: "ru" | "en";
@@ -62,11 +60,8 @@ const createFormData = (
   }
 
   // Главное изображение
-  if (article.mainImage) {
-    formData.append("mainImage", article.mainImage);
-  }
   if (article.mainImageUrl) {
-    formData.append("image", article.mainImageUrl);
+    formData.append("mainImage", article.mainImageUrl);
   }
 
   // Теги
@@ -150,6 +145,23 @@ export const articlesApi = {
 
   delete: async (id: string): Promise<void> => {
     await apiClient.delete(`/articles/${id}`);
+  },
+
+  uploadImage: async (image: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append("image", image);
+
+    const { data } = await apiClient.post<{ imageUrl?: string; url?: string }>(
+      "/articles/upload-image",
+      formData
+    );
+    const imageUrl = data.imageUrl || data.url;
+
+    if (!imageUrl) {
+      throw new Error("Image upload response does not contain a URL");
+    }
+
+    return imageUrl;
   },
 
   // API для работы с тегами

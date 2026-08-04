@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,6 +7,7 @@ import { Trash2, Upload } from "lucide-react";
 
 interface MainImageUploadProps {
   mainImageUrl?: string;
+  previewUrl?: string | null;
   onImageChange: (file: File | null) => void;
   onUrlChange: (url: string) => void;
   onRemove: () => void;
@@ -16,57 +16,35 @@ interface MainImageUploadProps {
 
 export default function MainImageUpload({
   mainImageUrl,
+  previewUrl,
   onImageChange,
   onUrlChange,
   onRemove,
   isUploading = false,
 }: MainImageUploadProps) {
-  const [previewUrl, setPreviewUrl] = useState<string | null>(
-    mainImageUrl || null
-  );
-  const [urlInput, setUrlInput] = useState(mainImageUrl || "");
-
-  // Обновляем состояние когда изменяется mainImageUrl (например, при загрузке новой статьи)
-  useEffect(() => {
-    setPreviewUrl(mainImageUrl || null);
-    setUrlInput(mainImageUrl || "");
-  }, [mainImageUrl]);
+  const displayedPreview = previewUrl || mainImageUrl || null;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       onImageChange(file);
-
-      // Создаем превью
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setPreviewUrl(event.target?.result as string);
-      };
-      reader.readAsDataURL(file);
     }
   };
 
   const handleUrlChange = (url: string) => {
-    setUrlInput(url);
     onUrlChange(url);
     if (url) {
-      setPreviewUrl(url);
       onImageChange(null); // Очищаем файл при вводе URL
-    } else {
-      // Если URL пустой, очищаем превью
-      setPreviewUrl(null);
     }
   };
 
   const handleRemove = () => {
-    setPreviewUrl(null);
-    setUrlInput("");
     onRemove();
 
     // Очищаем input файла
-    const fileInput = document.querySelector(
-      'input[type="file"]'
-    ) as HTMLInputElement;
+    const fileInput = document.getElementById(
+      "main-image-file"
+    ) as HTMLInputElement | null;
     if (fileInput) {
       fileInput.value = "";
     }
@@ -74,10 +52,10 @@ export default function MainImageUpload({
 
   return (
     <div className="space-y-4">
-      {previewUrl ? (
+      {displayedPreview ? (
         <div className="relative">
           <img
-            src={previewUrl}
+            src={displayedPreview}
             alt="Главное изображение"
             className="w-full max-w-md h-48 object-cover rounded-md border"
           />
@@ -122,7 +100,7 @@ export default function MainImageUpload({
             id="main-image-url"
             type="url"
             placeholder="https://example.com/image.jpg"
-            value={urlInput}
+            value={mainImageUrl || ""}
             onChange={(e) => handleUrlChange(e.target.value)}
             disabled={isUploading}
           />
