@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import axios from "axios"
+import { PaginationControls } from "@/components/ui/pagination-controls"
 
 const getPromoCodeErrorMessage = (error: unknown, fallback: string) => {
   if (!axios.isAxiosError(error)) {
@@ -29,6 +30,9 @@ const getPromoCodeErrorMessage = (error: unknown, fallback: string) => {
 export default function PromoCodeList() {
   const queryClient = useQueryClient()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(100)
+  const [showAll, setShowAll] = useState(false)
   const [newPromoCode, setNewPromoCode] = useState<CreatePromoCodeDto>({
     promocode: "",
     discount: 10,
@@ -45,6 +49,7 @@ export default function PromoCodeList() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['promocodes'] })
       setIsDialogOpen(false)
+      setPage(1)
       setNewPromoCode({ promocode: "", discount: 10, limit: 50 })
       toast.success("Промокод успешно создан")
     },
@@ -58,6 +63,7 @@ export default function PromoCodeList() {
     mutationFn: promocodesApi.delete,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['promocodes'] })
+      setPage(1)
       toast.success("Промокод успешно удален")
     },
     onError: (error) => {
@@ -65,6 +71,11 @@ export default function PromoCodeList() {
       console.error(error)
     }
   })
+
+  const totalPages = Math.ceil(promoCodes.length / limit)
+  const visiblePromoCodes = showAll
+    ? promoCodes
+    : promoCodes.slice((page - 1) * limit, page * limit)
 
   const handleCreatePromoCode = () => {
     const promocode = newPromoCode.promocode.trim().toUpperCase()
@@ -159,7 +170,8 @@ export default function PromoCodeList() {
         {isLoading ? (
           <div className="flex justify-center py-8">Загрузка...</div>
         ) : (
-          <Table>
+          <>
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Код</TableHead>
@@ -176,7 +188,7 @@ export default function PromoCodeList() {
                   </TableCell>
                 </TableRow>
               ) : (
-                promoCodes.map((promoCode) => (
+                visiblePromoCodes.map((promoCode) => (
                   <TableRow key={promoCode.code}>
                     <TableCell className="font-mono">{promoCode.code}</TableCell>
                     <TableCell>{promoCode.discount}%</TableCell>
@@ -217,7 +229,27 @@ export default function PromoCodeList() {
                 ))
               )}
             </TableBody>
-          </Table>
+            </Table>
+            <div className="mt-4">
+              <PaginationControls
+                page={page}
+                totalPages={totalPages}
+                total={promoCodes.length}
+                limit={limit}
+                showAll={showAll}
+                onPageChange={setPage}
+                onLimitChange={(nextLimit) => {
+                  setShowAll(false)
+                  setLimit(nextLimit)
+                  setPage(1)
+                }}
+                onShowAll={() => {
+                  setShowAll(true)
+                  setPage(1)
+                }}
+              />
+            </div>
+          </>
         )}
       </CardContent>
     </Card>

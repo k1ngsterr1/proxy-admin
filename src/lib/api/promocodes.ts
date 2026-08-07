@@ -25,6 +25,6 @@ export const promocodesApi = {
   },
 
   delete: async (code: string): Promise<void> => {
-    await apiClient.delete(`/user/promocode/delete/${encodeURIComponent(code)}`);
+    await apiClient.delete('/user/promocode', { data: { code } });
   }
 };

@@ -114,9 +114,10 @@ export default function LogsPage() {
   const [activeTab, setActiveTab] = useState("orders");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(100);
+  const [showAll, setShowAll] = useState(false);
   const { data, isLoading, error } = useQuery({
-    queryKey: ["generalLogs", page, limit],
-    queryFn: () => getGeneralLogs({ page, limit }),
+    queryKey: ["generalLogs", page, limit, showAll],
+    queryFn: () => getGeneralLogs({ page, limit, all: showAll }),
     staleTime: 1000 * 60 * 5,
     retry: 2,
   });
@@ -183,9 +184,15 @@ export default function LogsPage() {
                 totalPages={totalPages}
                 total={total}
                 limit={limit}
+                showAll={showAll}
                 onPageChange={setPage}
                 onLimitChange={(nextLimit) => {
+                  setShowAll(false)
                   setLimit(nextLimit)
+                  setPage(1)
+                }}
+                onShowAll={() => {
+                  setShowAll(true)
                   setPage(1)
                 }}
               />

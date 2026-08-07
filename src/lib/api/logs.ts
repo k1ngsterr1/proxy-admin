@@ -33,12 +33,14 @@ export type GeneralLogsResponse = {
 export const getGeneralLogs = async ({
   page,
   limit,
+  all = false,
 }: {
   page: number;
   limit: number;
+  all?: boolean;
 }): Promise<GeneralLogsResponse> => {
   const { data } = await apiClient.get<GeneralLogsResponse>('/orders/admin/general-log', {
-    params: { page, limit },
+    params: { page, limit, all },
   });
   return data;
 };

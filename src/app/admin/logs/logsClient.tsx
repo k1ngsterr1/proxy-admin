@@ -18,6 +18,7 @@ import AdminLayout from "@/components/layout/AdminLayout";
 
 import { useGetLogs } from "@/lib/api/logs";
 import { useUserStore } from "@/components/model/user-store";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 
 export default function UserLogsPage() {
   const searchParams = useSearchParams();
@@ -33,6 +34,19 @@ export default function UserLogsPage() {
   }, [userId]);
 
   const [activeTab, setActiveTab] = useState("orders");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(100);
+  const [showAll, setShowAll] = useState(false);
+  const orders = logs?.orders ?? [];
+  const payments = logs?.payments ?? [];
+  const activeItems = activeTab === "orders" ? orders : payments;
+  const totalPages = Math.ceil(activeItems.length / limit);
+  const visibleOrders = showAll
+    ? orders
+    : orders.slice((page - 1) * limit, page * limit);
+  const visiblePayments = showAll
+    ? payments
+    : payments.slice((page - 1) * limit, page * limit);
 
   return (
     <AdminLayout>
@@ -44,7 +58,10 @@ export default function UserLogsPage() {
           <Tabs
             defaultValue="orders"
             value={activeTab}
-            onValueChange={setActiveTab}
+            onValueChange={(value) => {
+              setActiveTab(value);
+              setPage(1);
+            }}
           >
             <TabsList className="mb-4">
               <TabsTrigger value="orders">
@@ -75,7 +92,7 @@ export default function UserLogsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {logs?.orders?.map((order: any) => (
+                    {visibleOrders.map((order: any) => (
                       <TableRow key={order.id}>
                         <TableCell className="font-mono text-xs">
                           {order.id}
@@ -116,7 +133,7 @@ export default function UserLogsPage() {
                   </TableBody>
                 </Table>
 
-                {logs?.orders?.length === 0 && (
+                {orders.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
                     Заказы не найдены
                   </div>
@@ -125,7 +142,7 @@ export default function UserLogsPage() {
             )}
 
             <TabsContent value="payments">
-              {logs?.payments?.length > 0 ? (
+              {payments.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -138,7 +155,7 @@ export default function UserLogsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {logs?.payments.map((payment: any) => (
+                    {visiblePayments.map((payment: any) => (
                       <TableRow key={payment.id}>
                         <TableCell className="font-mono text-xs">
                           {payment.id}
@@ -172,6 +189,27 @@ export default function UserLogsPage() {
                 </div>
               )}
             </TabsContent>
+            {!isLoading && (
+              <div className="mt-4">
+                <PaginationControls
+                  page={page}
+                  totalPages={totalPages}
+                  total={activeItems.length}
+                  limit={limit}
+                  showAll={showAll}
+                  onPageChange={setPage}
+                  onLimitChange={(nextLimit) => {
+                    setShowAll(false);
+                    setLimit(nextLimit);
+                    setPage(1);
+                  }}
+                  onShowAll={() => {
+                    setShowAll(true);
+                    setPage(1);
+                  }}
+                />
+              </div>
+            )}
           </Tabs>
         </CardContent>
       </Card>

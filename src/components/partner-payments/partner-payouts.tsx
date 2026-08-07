@@ -32,6 +32,7 @@ import { Label } from "@/components/ui/label";
 import { Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import {
   payoutsApi,
   type PayoutRequest,
@@ -45,6 +46,9 @@ export default function PartnerPayoutList() {
   );
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newStatus, setNewStatus] = useState<PayoutStatus>("PAID");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(100);
+  const [showAll, setShowAll] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["payout-requests"],
@@ -53,6 +57,10 @@ export default function PartnerPayoutList() {
 
   // Extract the payout array from the response
   const payoutRequests = data?.payout || [];
+  const totalPages = Math.ceil(payoutRequests.length / limit);
+  const visiblePayoutRequests = showAll
+    ? payoutRequests
+    : payoutRequests.slice((page - 1) * limit, page * limit);
 
   const updateStatusMutation = useMutation({
     mutationFn: payoutsApi.updateStatus,
@@ -141,7 +149,8 @@ export default function PartnerPayoutList() {
         {isLoading ? (
           <div className="flex justify-center py-8">Загрузка...</div>
         ) : (
-          <Table>
+          <>
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Кошелек</TableHead>
@@ -163,7 +172,7 @@ export default function PartnerPayoutList() {
                   </TableCell>
                 </TableRow>
               ) : (
-                payoutRequests.map((payout: PayoutRequest) => (
+                visiblePayoutRequests.map((payout: PayoutRequest) => (
                   <TableRow key={payout.id}>
                     <TableCell>{payout.wallet}</TableCell>
                     <TableCell>{formatAmount(payout.amount)}</TableCell>
@@ -206,7 +215,27 @@ export default function PartnerPayoutList() {
                 ))
               )}
             </TableBody>
-          </Table>
+            </Table>
+            <div className="mt-4">
+              <PaginationControls
+                page={page}
+                totalPages={totalPages}
+                total={payoutRequests.length}
+                limit={limit}
+                showAll={showAll}
+                onPageChange={setPage}
+                onLimitChange={(nextLimit) => {
+                  setShowAll(false);
+                  setLimit(nextLimit);
+                  setPage(1);
+                }}
+                onShowAll={() => {
+                  setShowAll(true);
+                  setPage(1);
+                }}
+              />
+            </div>
+          </>
         )}
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

@@ -83,12 +83,15 @@ export const articlesApi = {
   getAllPaginated: async (
     lang: "ru" | "en",
     page: number = 1,
-    limit: number = 10
+    limit: number = 10,
+    all: boolean = false
   ): Promise<PaginatedResponse<Article>> => {
     try {
       const { data } = await apiClient.get<
         PaginatedResponse<Article> | Article[]
-      >(`/articles?lang=${lang}&page=${page}&limit=${limit}`);
+      >('/articles', {
+        params: { lang, page, limit, paginated: true, all },
+      });
 
       // Если API возвращает массив (старый формат), преобразуем в пагинированный формат
       if (Array.isArray(data)) {

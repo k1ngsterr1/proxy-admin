@@ -14,6 +14,7 @@ import { toast } from "sonner";
 
 import { useOrdersData } from "@/lib/orders";
 import { useSearchParams } from "next/navigation";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 
 type ProxyType = "isp" | "ipv6" | "resident";
 type ProxyProtocol = "http" | "socks";
@@ -43,6 +44,9 @@ const getProxyConnection = (proxy: any, protocol: ProxyProtocol) => {
 
 export default function Orders() {
   const [activeTab, setActiveTab] = useState<ProxyType>("resident");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(100);
+  const [showAll, setShowAll] = useState(false);
 
   const searchParams = useSearchParams();
   const userId = searchParams.get("userId");
@@ -190,6 +194,10 @@ export default function Orders() {
   };
 
   const proxies = orders?.data?.items || [];
+  const totalPages = Math.ceil(proxies.length / limit);
+  const visibleProxies = showAll
+    ? proxies
+    : proxies.slice((page - 1) * limit, page * limit);
 
   return (
     <AdminLayout>
@@ -202,7 +210,10 @@ export default function Orders() {
         <div className="bg-[#1a1a1a] rounded-md p-6">
           <Tabs
             defaultValue="resident"
-            onValueChange={(value) => setActiveTab(value as ProxyType)}
+            onValueChange={(value) => {
+              setActiveTab(value as ProxyType);
+              setPage(1);
+            }}
             className="w-full"
           >
             <div className="flex flex-row justify-between w-full">
@@ -297,7 +308,7 @@ export default function Orders() {
                       </tr>
                     </tbody>
                   )}
-                  {orders?.data?.items?.length === 0 ? (
+                  {proxies.length === 0 ? (
                     <tbody>
                       <tr>
                         <td colSpan={9} className="py-4 px-4 text-center">
@@ -307,7 +318,7 @@ export default function Orders() {
                     </tbody>
                   ) : (
                     <tbody>
-                      {orders?.data?.items?.map((order: any, index: number) =>
+                      {visibleProxies.map((order: any, index: number) =>
                         order.package_list?.map(
                           (pkg: any, subIndex: number) => (
                             <tr
@@ -415,7 +426,7 @@ export default function Orders() {
                       </tr>
                     )}
 
-                    {!isLoading && orders?.data?.items?.length === 0 && (
+                    {!isLoading && proxies.length === 0 && (
                       <tr>
                         <td
                           colSpan={9}
@@ -427,7 +438,7 @@ export default function Orders() {
                     )}
 
                     {!isLoading &&
-                      orders?.data?.items?.map((item: any, index: number) => (
+                      visibleProxies.map((item: any, index: number) => (
                         <tr key={index} className="border-b border-[#333]">
                           <td className="py-4 pr-4">
                             {item?.order_number || "—"}
@@ -499,7 +510,7 @@ export default function Orders() {
                     </tbody>
                   )}
                   <tbody>
-                    {orders?.data?.items?.length === 0 ? (
+                    {proxies.length === 0 ? (
                       <tr>
                         <td colSpan={9} className="py-4 px-4 text-center">
                           <p className="text-[#b3b3b3] text-sm">Нет данных</p>
@@ -507,7 +518,7 @@ export default function Orders() {
                       </tr>
                     ) : (
                       <>
-                        {orders?.data?.items?.map(
+                        {visibleProxies.map(
                           (item: any, index: number) => (
                             <tr key={index} className="border-b border-[#333]">
                               <td className="py-4 pr-4">
@@ -555,6 +566,27 @@ export default function Orders() {
                 </table>
               </div>
             </TabsContent>
+            {!isLoading && (
+              <div className="mt-4">
+                <PaginationControls
+                  page={page}
+                  totalPages={totalPages}
+                  total={proxies.length}
+                  limit={limit}
+                  showAll={showAll}
+                  onPageChange={setPage}
+                  onLimitChange={(nextLimit) => {
+                    setShowAll(false);
+                    setLimit(nextLimit);
+                    setPage(1);
+                  }}
+                  onShowAll={() => {
+                    setShowAll(true);
+                    setPage(1);
+                  }}
+                />
+              </div>
+            )}
           </Tabs>
         </div>
       </div>

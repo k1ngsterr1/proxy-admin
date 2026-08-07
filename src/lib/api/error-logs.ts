@@ -21,9 +21,17 @@ export type ErrorLogsResponse = {
 };
 
 export const errorLogsApi = {
-  getAll: async ({ page, limit }: { page: number; limit: number }) => {
+  getAll: async ({
+    page,
+    limit,
+    all = false,
+  }: {
+    page: number;
+    limit: number;
+    all?: boolean;
+  }) => {
     const { data } = await apiClient.get<ErrorLogsResponse>("/admin/error-logs", {
-      params: { page, limit },
+      params: { page, limit, all },
     });
     return data;
   },

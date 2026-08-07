@@ -47,10 +47,11 @@ export default function ArticlesList() {
   const [lang, setLang] = useState<"ru" | "en">("ru");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
+  const [showAll, setShowAll] = useState(false);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["articles", lang, page, limit],
-    queryFn: () => articlesApi.getAllPaginated(lang, page, limit),
+    queryKey: ["articles", lang, page, limit, showAll],
+    queryFn: () => articlesApi.getAllPaginated(lang, page, limit, showAll),
   });
 
   const articles = data?.data || [];
@@ -81,6 +82,7 @@ export default function ArticlesList() {
   };
 
   const handleLimitChange = (newLimit: number) => {
+    setShowAll(false);
     setLimit(newLimit);
     setPage(1); // Сбрасываем на первую страницу при изменении лимита
   };
@@ -171,7 +173,7 @@ export default function ArticlesList() {
                 articles.map((article, index) => (
                   <TableRow key={index}>
                     <TableCell className="font-mono text-xs">
-                      {index + 1}
+                      {showAll ? index + 1 : (page - 1) * limit + index + 1}
                     </TableCell>
                     <TableCell>
                       {article.mainImage || article.mainImageUrl ? (
@@ -271,16 +273,28 @@ export default function ArticlesList() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="text-sm text-muted-foreground">
-                  Показано {(page - 1) * limit + 1}-
-                  {Math.min(page * limit, total)} из {total} статей
+                  {showAll
+                    ? `Показаны все ${total} статей`
+                    : `Показано ${(page - 1) * limit + 1}-${Math.min(
+                        page * limit,
+                        total
+                      )} из ${total} статей`}
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">
                     На странице:
                   </span>
                   <Select
-                    value={limit.toString()}
-                    onValueChange={(value) => handleLimitChange(Number(value))}
+                    value={showAll ? "all" : limit.toString()}
+                    onValueChange={(value) => {
+                      if (value === "all") {
+                        setShowAll(true);
+                        setPage(1);
+                        return;
+                      }
+
+                      handleLimitChange(Number(value));
+                    }}
                   >
                     <SelectTrigger className="w-[100px]">
                       <SelectValue />
@@ -291,13 +305,14 @@ export default function ArticlesList() {
                       <SelectItem value="20">20</SelectItem>
                       <SelectItem value="50">50</SelectItem>
                       <SelectItem value="100">100</SelectItem>
+                      <SelectItem value="all">Все</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
             </div>
 
-            {totalPages > 1 && (
+            {!showAll && totalPages > 1 && (
               <div className="flex items-center justify-center gap-2">
                 <Button
                   variant="outline"

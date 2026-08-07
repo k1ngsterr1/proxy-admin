@@ -25,10 +25,11 @@ function statusVariant(statusCode: number) {
 export default function ErrorLogsPage() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(100);
+  const [showAll, setShowAll] = useState(false);
   const [search, setSearch] = useState("");
   const { data, isLoading, error } = useQuery({
-    queryKey: ["errorLogs", page, limit],
-    queryFn: () => errorLogsApi.getAll({ page, limit }),
+    queryKey: ["errorLogs", page, limit, showAll],
+    queryFn: () => errorLogsApi.getAll({ page, limit, all: showAll }),
     staleTime: 1000 * 30,
   });
 
@@ -106,9 +107,15 @@ export default function ErrorLogsPage() {
                 totalPages={data?.totalPages ?? 0}
                 total={data?.total ?? 0}
                 limit={limit}
+                showAll={showAll}
                 onPageChange={setPage}
                 onLimitChange={(nextLimit) => {
+                  setShowAll(false)
                   setLimit(nextLimit)
+                  setPage(1)
+                }}
+                onShowAll={() => {
+                  setShowAll(true)
                   setPage(1)
                 }}
               />
