@@ -82,11 +82,13 @@ export default function UserLogsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[180px]">ID заказа</TableHead>
+                      <TableHead className="w-[220px]">ID в нашей БД</TableHead>
                       <TableHead className="w-[180px]">Тип заказа</TableHead>
                       <TableHead>Дата</TableHead>
                       <TableHead>Сумма</TableHead>
-                      <TableHead>Номер заказа</TableHead>
+                      <TableHead className="min-w-[220px]">
+                        Заказ Proxy-Seller
+                      </TableHead>
                       <TableHead>Цель использования</TableHead>
                       <TableHead>Статус</TableHead>
                     </TableRow>
@@ -110,8 +112,21 @@ export default function UserLogsPage() {
                         <TableCell className="font-medium">
                           ${Number.parseFloat(order.totalPrice).toFixed(2)}
                         </TableCell>
-                        <TableCell className="font-mono text-xs">
-                          {order.orderId ?? "N/A"}
+                        <TableCell>
+                          <div className="space-y-1.5 font-mono text-xs">
+                            <div>
+                              <span className="mr-2 text-muted-foreground">
+                                orderId:
+                              </span>
+                              {order.orderId ?? "—"}
+                            </div>
+                            <div>
+                              <span className="mr-2 text-muted-foreground">
+                                orderNumber:
+                              </span>
+                              {order.orderNumber ?? "—"}
+                            </div>
+                          </div>
                         </TableCell>
                         <TableCell className="font-mono text-xs">
                           {order.goal}
