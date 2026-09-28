@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import dayjs from "dayjs";
 import { DollarSign, Ban, Package, FileClock } from "lucide-react";
 import type { User as UserType } from "../../types";
@@ -9,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PaginationControls } from "@/components/ui/pagination-controls";
+import { filterUsers } from "./user-filter";
 import {
   Table,
   TableBody,
@@ -35,6 +35,8 @@ interface UserTableProps {
   onPageChange: (page: number) => void;
   onLimitChange: (limit: number) => void;
   onShowAll: () => void;
+  searchTerm: string;
+  onSearchTermChange: (searchTerm: string) => void;
 }
 
 export default function UserTable({
@@ -54,18 +56,10 @@ export default function UserTable({
   onPageChange,
   onLimitChange,
   onShowAll,
+  searchTerm,
+  onSearchTermChange,
 }: UserTableProps) {
-  const [searchTerm, setSearchTerm] = useState("");
-
-  // Filter users based on search term
-  const filteredUsers = users.filter(
-    (user) =>
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (user.name
-        ? user.name.toLowerCase().includes(searchTerm.toLowerCase())
-        : false) ||
-      user.ip.includes(searchTerm)
-  );
+  const filteredUsers = filterUsers(users, searchTerm);
 
   // Sort users by creation date (newest first)
   const sortedUsers = [...filteredUsers].sort((a, b) => {
@@ -81,7 +75,7 @@ export default function UserTable({
             placeholder="Поиск пользователей..."
             className="w-full"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => onSearchTermChange(e.target.value)}
           />
         </div>
 
@@ -90,6 +84,7 @@ export default function UserTable({
             <TableHeader>
               <TableRow>
                 <TableHead>Email</TableHead>
+                <TableHead>ID пользователя</TableHead>
                 <TableHead>Дата создания</TableHead>
                 <TableHead>IP адрес</TableHead>
                 <TableHead>Баланс</TableHead>
@@ -101,6 +96,9 @@ export default function UserTable({
               {sortedUsers.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell>{user.email}</TableCell>
+                  <TableCell className="whitespace-nowrap font-mono text-xs">
+                    {user.id}
+                  </TableCell>
                   <TableCell>
                     {dayjs(user.createdAt).format("DD.MM.YYYY HH:mm")}
                   </TableCell>
@@ -182,18 +180,20 @@ export default function UserTable({
             </TableBody>
           </Table>
         </div>
-        <div className="mt-4">
-          <PaginationControls
-            page={page}
-            totalPages={totalPages}
-            total={total}
-            limit={limit}
-            showAll={showAll}
-            onPageChange={onPageChange}
-            onLimitChange={onLimitChange}
-            onShowAll={onShowAll}
-          />
-        </div>
+        {!searchTerm.trim() && (
+          <div className="mt-4">
+            <PaginationControls
+              page={page}
+              totalPages={totalPages}
+              total={total}
+              limit={limit}
+              showAll={showAll}
+              onPageChange={onPageChange}
+              onLimitChange={onLimitChange}
+              onShowAll={onShowAll}
+            />
+          </div>
+        )}
       </CardContent>
     </Card>
   );

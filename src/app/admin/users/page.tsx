@@ -6,7 +6,7 @@ import AdminLayout from "../../../components/layout/AdminLayout"
 import UserTable from "../../../components/users/UserTable"
 import BalanceModal from "../../../components/users/BalanceModal"
 import { usersApi } from "@/lib/api/users"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,10 +30,14 @@ export default function UsersPage() {
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(100)
   const [showAll, setShowAll] = useState(false)
+  const [searchTerm, setSearchTerm] = useState("")
+  const loadAllUsers = showAll || searchTerm.trim().length > 0
+  const usersQueryKey = ['users', loadAllUsers ? 1 : page, limit, loadAllUsers] as const
 
   const { data: usersResponse, isLoading, error } = useQuery({
-    queryKey: ['users', page, limit, showAll],
-    queryFn: () => usersApi.getAll({ page, limit, all: showAll })
+    queryKey: usersQueryKey,
+    queryFn: () => usersApi.getAll({ page: loadAllUsers ? 1 : page, limit, all: loadAllUsers }),
+    placeholderData: keepPreviousData,
   })
   const users = usersResponse?.data ?? []
 
@@ -48,7 +52,7 @@ export default function UsersPage() {
         return user
       })
 
-      queryClient.setQueryData(['users', page, limit, showAll], {
+      queryClient.setQueryData(usersQueryKey, {
         ...usersResponse,
         data: updatedUsers,
       })
@@ -66,7 +70,7 @@ export default function UsersPage() {
         return user
       })
 
-      queryClient.setQueryData(['users', page, limit, showAll], {
+      queryClient.setQueryData(usersQueryKey, {
         ...usersResponse,
         data: updatedUsers,
       })
@@ -142,7 +146,7 @@ export default function UsersPage() {
         return user
       })
 
-      queryClient.setQueryData(['users', page, limit, showAll], {
+      queryClient.setQueryData(usersQueryKey, {
         ...usersResponse,
         data: updatedUsers,
       })
@@ -204,6 +208,8 @@ export default function UsersPage() {
             setShowAll(true)
             setPage(1)
           }}
+          searchTerm={searchTerm}
+          onSearchTermChange={setSearchTerm}
         />
       )}
 
