@@ -19,9 +19,33 @@ export const useGetLogs = (userId: string) => {
     )
 }
 
+export type OrderLogStatus = 'PENDING' | 'PROCESSING' | 'PAID' | 'CANCELED';
+
+export type OrderLog = {
+  id: string;
+  orderId: string | null;
+  orderNumber: string | null;
+  type: string;
+  goal: string;
+  status: OrderLogStatus;
+  totalPrice: string;
+  createdAt: string;
+  updatedAt: string;
+  user: { email: string } | null;
+};
+
+export type PaymentLog = {
+  id: string;
+  method: string;
+  price: string;
+  createdAt: string;
+  updatedAt: string;
+  user: { email: string } | null;
+};
+
 export type GeneralLogsResponse = {
-  orders: any[];
-  payments: any[];
+  orders: OrderLog[];
+  payments: PaymentLog[];
   totalOrders: number;
   totalPayments: number;
   page: number;
@@ -34,13 +58,17 @@ export const getGeneralLogs = async ({
   page,
   limit,
   all = false,
+  search = '',
+  status = 'ALL',
 }: {
   page: number;
   limit: number;
   all?: boolean;
+  search?: string;
+  status?: OrderLogStatus | 'ALL';
 }): Promise<GeneralLogsResponse> => {
   const { data } = await apiClient.get<GeneralLogsResponse>('/orders/admin/general-log', {
-    params: { page, limit, all },
+    params: { page, limit, all, search, status },
   });
   return data;
 };
