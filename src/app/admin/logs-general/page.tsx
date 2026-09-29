@@ -63,7 +63,7 @@ function OrderTable({
 
   return (
     <div className="overflow-x-auto">
-      <Table>
+      <Table className="text-xs [&_td]:px-3 [&_th]:px-3">
         <TableHeader>
           <TableRow>
             <TableHead>Email</TableHead>
@@ -79,10 +79,10 @@ function OrderTable({
         <TableBody>
           {orders.map((order) => (
             <TableRow key={order.id}>
-              <TableCell className="font-mono text-xs">
+              <TableCell className="max-w-[170px] break-words font-mono text-xs">
                 {order.user?.email || "N/A"}
               </TableCell>
-              <TableCell className="min-w-[180px] max-w-[220px] break-all font-mono text-xs">
+              <TableCell className="min-w-[150px] max-w-[180px] break-all font-mono text-xs">
                 {order.id}
               </TableCell>
               <TableCell>{order.type || "N/A"}</TableCell>
@@ -95,7 +95,7 @@ function OrderTable({
                 </div>
               </TableCell>
               <TableCell>${Number(order.totalPrice || 0).toFixed(2)}</TableCell>
-              <TableCell className="min-w-[220px] font-mono text-xs">
+              <TableCell className="min-w-[200px] font-mono text-xs">
                 <div>
                   <span className="text-muted-foreground">orderId: </span>
                   {order.orderId || "—"}
