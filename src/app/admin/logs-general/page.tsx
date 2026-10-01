@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, RefreshCw } from "lucide-react";
+import { Loader2, RefreshCw, FilterX } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,11 +20,12 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
 import AdminLayout from "@/components/layout/AdminLayout";
+import { LogColumnHeader } from '@/components/logs/log-column-header';
+import { buildGeneralLogParams, createLogTableQuery, type LogTableQuery } from '@/components/logs/log-query';
 import {
   getGeneralLogs,
   type OrderLog,
@@ -46,37 +47,47 @@ const LoadingState = () => (
   </div>
 );
 
+const dateFields = [
+  { key: 'createdFrom', label: 'Создан с (UTC)', type: 'date' as const },
+  { key: 'createdTo', label: 'Создан по (UTC)', type: 'date' as const },
+  { key: 'updatedFrom', label: 'Обновлён с (UTC)', type: 'date' as const },
+  { key: 'updatedTo', label: 'Обновлён по (UTC)', type: 'date' as const },
+];
+const amountFields = [{ key: 'amountMin', label: 'От, $', type: 'number' as const }, { key: 'amountMax', label: 'До, $', type: 'number' as const }];
+const dateSortOptions = [{ value: 'createdAt', label: 'Дата создания' }, { value: 'updatedAt', label: 'Дата обновления' }];
+
 function OrderTable({
   orders,
   searchTerm,
+  query, onChange, status, onStatusChange,
 }: {
   orders: OrderLog[];
   searchTerm: string;
+  query: LogTableQuery; onChange: (query: LogTableQuery) => void;
+  status: OrderLogStatus | 'ALL'; onStatusChange: (status: OrderLogStatus | 'ALL') => void;
 }) {
-  if (!orders.length) {
-    return (
-      <div className="py-8 text-center text-muted-foreground">
-        {searchTerm ? "Совпадений не найдено" : "Логи отсутствуют"}
-      </div>
-    );
-  }
 
   return (
     <div className="overflow-x-auto">
       <Table className="text-xs [&_td]:px-3 [&_th]:px-3">
         <TableHeader>
           <TableRow>
-            <TableHead>Email</TableHead>
-            <TableHead>ID в нашей БД</TableHead>
-            <TableHead>Тип заказа</TableHead>
-            <TableHead>Даты</TableHead>
-            <TableHead>Сумма</TableHead>
-            <TableHead>Заказ Proxy-Seller</TableHead>
-            <TableHead>Цель использования</TableHead>
-            <TableHead>Статус</TableHead>
+            <LogColumnHeader label="Email" sortField="email" query={query} onChange={onChange} fields={[{key:'email',label:'Содержит'}]} />
+            <LogColumnHeader label="ID в нашей БД" sortField="id" query={query} onChange={onChange} fields={[{key:'id',label:'Содержит'}]} />
+            <LogColumnHeader label="Тип заказа" sortField="type" query={query} onChange={onChange} fields={[{key:'type',label:'Тип',options:['ipv6','isp','resident'].map(value=>({value,label:value}))}]} />
+            <LogColumnHeader label="Даты" sortField="createdAt" query={query} onChange={onChange} fields={dateFields} sortOptions={dateSortOptions} />
+            <LogColumnHeader label="Сумма" sortField="amount" query={query} onChange={onChange} fields={amountFields} />
+            <LogColumnHeader label="Заказ Proxy-Seller" sortField="orderNumber" query={query} onChange={onChange} fields={[{key:'providerOrder',label:'orderId / orderNumber'}]} sortOptions={[{value:'orderNumber',label:'orderNumber'},{value:'orderId',label:'orderId'}]} />
+            <LogColumnHeader label="Цель использования" sortField="goal" query={query} onChange={onChange} fields={[{key:'goal',label:'Содержит'}]} />
+            <LogColumnHeader label="Статус" sortField="status" query={query} onChange={onChange}>
+              <select aria-label="Фильтр статуса" className="h-9 w-full rounded border bg-background px-2 text-sm" value={status} onChange={e=>onStatusChange(e.target.value as OrderLogStatus|'ALL')}>
+                <option value="ALL">Все статусы</option>{Object.entries(statusLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}
+              </select>
+            </LogColumnHeader>
           </TableRow>
         </TableHeader>
         <TableBody>
+          {!orders.length && <TableRow><TableCell colSpan={8} className="py-8 text-center text-muted-foreground">{searchTerm || Object.values(query.filters).some(Boolean) || status !== 'ALL' ? 'Совпадений не найдено' : 'Логи отсутствуют'}</TableCell></TableRow>}
           {orders.map((order) => (
             <TableRow key={order.id}>
               <TableCell className="max-w-[170px] break-words font-mono text-xs">
@@ -88,10 +99,10 @@ function OrderTable({
               <TableCell>{order.type || "N/A"}</TableCell>
               <TableCell className="whitespace-nowrap text-xs">
                 <div>
-                  Обновлён: {new Date(order.updatedAt).toLocaleString()}
+                  Создан: {new Date(order.createdAt).toLocaleString('ru-RU')}
                 </div>
                 <div className="mt-1 text-muted-foreground">
-                  Создан: {new Date(order.createdAt).toLocaleString()}
+                  Обновлён: {new Date(order.updatedAt).toLocaleString('ru-RU')}
                 </div>
               </TableCell>
               <TableCell>${Number(order.totalPrice || 0).toFixed(2)}</TableCell>
@@ -125,38 +136,35 @@ function OrderTable({
 function PaymentTable({
   payments,
   searchTerm,
+  query, onChange,
 }: {
   payments: PaymentLog[];
   searchTerm: string;
+  query: LogTableQuery; onChange: (query: LogTableQuery) => void;
 }) {
-  if (!payments.length) {
-    return (
-      <div className="py-8 text-center text-muted-foreground">
-        {searchTerm ? "Совпадений не найдено" : "Платежи отсутствуют"}
-      </div>
-    );
-  }
 
   return (
     <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Email</TableHead>
-            <TableHead>Метод</TableHead>
-            <TableHead>Дата</TableHead>
-            <TableHead>Сумма</TableHead>
+            <LogColumnHeader label="Email" sortField="email" query={query} onChange={onChange} fields={[{key:'email',label:'Содержит'}]} />
+            <LogColumnHeader label="Метод" sortField="method" query={query} onChange={onChange} fields={[{key:'method',label:'Содержит'}]} />
+            <LogColumnHeader label="Дата" sortField="createdAt" query={query} onChange={onChange} fields={dateFields} sortOptions={dateSortOptions} />
+            <LogColumnHeader label="Сумма" sortField="amount" query={query} onChange={onChange} fields={amountFields} />
           </TableRow>
         </TableHeader>
         <TableBody>
+          {!payments.length && <TableRow><TableCell colSpan={4} className="py-8 text-center text-muted-foreground">{searchTerm || Object.values(query.filters).some(Boolean) ? 'Совпадений не найдено' : 'Платежи отсутствуют'}</TableCell></TableRow>}
           {payments.map((payment) => (
             <TableRow key={payment.id}>
               <TableCell className="font-mono text-xs">
                 {payment.user?.email || "N/A"}
               </TableCell>
               <TableCell>{payment.method || "N/A"}</TableCell>
-              <TableCell>
-                {new Date(payment.createdAt).toLocaleString()}
+              <TableCell className="whitespace-nowrap text-xs">
+                <div>Создан: {new Date(payment.createdAt).toLocaleString('ru-RU')}</div>
+                <div className="mt-1 text-muted-foreground">Обновлён: {new Date(payment.updatedAt).toLocaleString('ru-RU')}</div>
               </TableCell>
               <TableCell>${Number(payment.price || 0).toFixed(2)}</TableCell>
             </TableRow>
@@ -175,13 +183,16 @@ export default function LogsPage() {
   const [showAll, setShowAll] = useState(false);
   const [status, setStatus] = useState<OrderLogStatus | "ALL">("ALL");
   const [search, setSearch] = useState("");
+  const [ordersQuery, setOrdersQuery] = useState(createLogTableQuery);
+  const [paymentsQuery, setPaymentsQuery] = useState(createLogTableQuery);
   useEffect(() => {
     const timeout = setTimeout(() => setSearch(searchTerm.trim()), 300);
     return () => clearTimeout(timeout);
   }, [searchTerm]);
   const orderStatus = activeTab === "orders" ? status : "ALL";
+  const columns = buildGeneralLogParams({ orders: ordersQuery, payments: paymentsQuery, page, limit, all: showAll, search, status: orderStatus });
   const { data, isLoading, isFetching, error, refetch } = useQuery({
-    queryKey: ["generalLogs", page, limit, showAll, search, orderStatus],
+    queryKey: ["generalLogs", columns],
     queryFn: () =>
       getGeneralLogs({
         page,
@@ -189,6 +200,7 @@ export default function LogsPage() {
         all: showAll,
         search,
         status: orderStatus,
+        columns,
       }),
     staleTime: 1000 * 30,
     retry: 2,
@@ -205,23 +217,6 @@ export default function LogsPage() {
     activeTab === "orders"
       ? (data?.totalOrderPages ?? 0)
       : (data?.totalPaymentPages ?? 0);
-
-  if (error) {
-    return (
-      <AdminLayout>
-        <Card>
-          <CardHeader>
-            <CardTitle>Ошибка загрузки логов</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="py-8 text-center text-destructive">
-              {error.message}
-            </div>
-          </CardContent>
-        </Card>
-      </AdminLayout>
-    );
-  }
 
   return (
     <AdminLayout>
@@ -264,6 +259,11 @@ export default function LogsPage() {
               </Select>
             )}
             <Button
+              variant="ghost" size="icon" title="Сбросить фильтры и сортировку" aria-label="Сбросить фильтры и сортировку"
+              onClick={() => { setOrdersQuery(createLogTableQuery()); setPaymentsQuery(createLogTableQuery()); setStatus('ALL'); setSearchTerm(''); setSearch(''); setPage(1); }}>
+              <FilterX className="h-4 w-4" />
+            </Button>
+            <Button
               variant="outline"
               size="icon"
               title="Обновить логи"
@@ -276,6 +276,7 @@ export default function LogsPage() {
               />
             </Button>
           </div>
+          {error && <div role="alert" className="mb-4 text-sm text-destructive">Ошибка загрузки логов: {error.message}</div>}
           <Tabs
             value={activeTab}
             onValueChange={(value) => {
@@ -291,14 +292,14 @@ export default function LogsPage() {
               {loading ? (
                 <LoadingState />
               ) : (
-                <OrderTable orders={orders} searchTerm={searchTerm} />
+                <OrderTable orders={orders} searchTerm={searchTerm} query={ordersQuery} onChange={next=>{setOrdersQuery(next);setPage(1);}} status={status} onStatusChange={next=>{setStatus(next);setPage(1);}} />
               )}
             </TabsContent>
             <TabsContent value="payments">
               {loading ? (
                 <LoadingState />
               ) : (
-                <PaymentTable payments={payments} searchTerm={searchTerm} />
+                <PaymentTable payments={payments} searchTerm={searchTerm} query={paymentsQuery} onChange={next=>{setPaymentsQuery(next);setPage(1);}} />
               )}
             </TabsContent>
           </Tabs>

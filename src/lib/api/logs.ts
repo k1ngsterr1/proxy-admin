@@ -60,15 +60,17 @@ export const getGeneralLogs = async ({
   all = false,
   search = '',
   status = 'ALL',
+  columns = {},
 }: {
   page: number;
   limit: number;
   all?: boolean;
   search?: string;
   status?: OrderLogStatus | 'ALL';
+  columns?: Record<string, string | number | boolean>;
 }): Promise<GeneralLogsResponse> => {
   const { data } = await apiClient.get<GeneralLogsResponse>('/orders/admin/general-log', {
-    params: { page, limit, all, search, status },
+    params: { ...columns, page, limit, all, search, status },
   });
   return data;
 };

@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "test": "node --no-warnings --test src/components/users/user-filter.test.mts",
+    "test": "node --no-warnings --test src/components/users/user-filter.test.mts src/components/logs/log-query.test.mts",
     "start": "next start",
     "lint": "next lint"
   },
